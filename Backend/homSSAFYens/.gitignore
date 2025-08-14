@@ -41,3 +41,6 @@ application.yml
 application.properties
 application-*.yml
 application-*.properties
+
+### env ###
+/src/main/resources/properties/env.properties
