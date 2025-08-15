@@ -34,7 +34,7 @@ public class WebClientConfig {
     public WebClient tideWebClient(WebClient.Builder builder, ClientProperties props) { return build(builder, props.getTide()); }
 
     @Bean @Qualifier("currentWebClient")
-    public WebClient currnetWebClient(WebClient.Builder builder, ClientProperties props) { return build(builder, props.getCurrent()); }
+    public WebClient currentWebClient(WebClient.Builder builder, ClientProperties props) { return build(builder, props.getCurrent()); }
 
     @Bean @Qualifier("forecastWebClient")
     public WebClient forecastWebClient(WebClient.Builder builder, ClientProperties props) { return build(builder, props.getForecast()); }
