@@ -1,6 +1,7 @@
 package com.homoSSAFYens.homSSAFYens.controller;
 
 import com.homoSSAFYens.homSSAFYens.client.ForecastApiClient;
+import com.homoSSAFYens.homSSAFYens.common.ApiResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -17,8 +18,8 @@ public class ForecastController {
     }
 
     @GetMapping("/test")
-    public String test(@RequestParam double lat, @RequestParam double lon) {
-        return forecastApiClient.testForecast(lat, lon);
+    public ApiResponse<String> test(@RequestParam double lat, @RequestParam double lon) {
+        return ApiResponse.success(null, forecastApiClient.testForecast(lat, lon));
     }
 
 }

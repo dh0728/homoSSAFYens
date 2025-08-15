@@ -1,7 +1,7 @@
 package com.homoSSAFYens.homSSAFYens.controller;
 
 import com.homoSSAFYens.homSSAFYens.client.PointApiClient;
-import com.homoSSAFYens.homSSAFYens.client.TempApiClient;
+import com.homoSSAFYens.homSSAFYens.common.ApiResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -18,7 +18,7 @@ public class PointController {
     }
 
     @GetMapping("/test")
-    public String test(@RequestParam double lat, @RequestParam double lon) {
-        return pointApiClient.testPoint(lat, lon);
+    public ApiResponse<String> test(@RequestParam double lat, @RequestParam double lon) {
+        return ApiResponse.success(null, pointApiClient.testPoint(lat, lon));
     }
 }

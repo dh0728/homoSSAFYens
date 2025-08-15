@@ -1,6 +1,7 @@
 package com.homoSSAFYens.homSSAFYens.controller;
 
 import com.homoSSAFYens.homSSAFYens.client.TideApiClient;
+import com.homoSSAFYens.homSSAFYens.common.ApiResponse;
 import com.homoSSAFYens.homSSAFYens.dto.TideDailyInfo;
 import com.homoSSAFYens.homSSAFYens.service.TideService;
 import org.springframework.validation.annotation.Validated;
@@ -26,19 +27,19 @@ public class TideController {
 
 
     @GetMapping("/test")
-    public String test(@RequestParam double lat, @RequestParam double lon) {
-        return tideApiClient.testTide(lat, lon);
+    public ApiResponse<String> test(@RequestParam double lat, @RequestParam double lon) {
+        return ApiResponse.success(null, tideApiClient.testTide(lat, lon));
     }
 
     /** 7일치 전체 조회 */
     @GetMapping("/weekly")
-    public List<TideDailyInfo> weekly(@RequestParam Double lat, @RequestParam Double lon) {
-        return tideService.getWeekly(lat, lon);
+    public ApiResponse<List<TideDailyInfo>> weekly(@RequestParam Double lat, @RequestParam Double lon) {
+        return ApiResponse.success(null, tideService.getWeekly(lat, lon));
     }
 
     /** 하루치 조회 */
     @GetMapping("/today")
-    public TideDailyInfo today(@RequestParam Double lat, @RequestParam Double lon) {
-        return tideService.getDaily(lat, lon);
+    public ApiResponse<TideDailyInfo> today(@RequestParam Double lat, @RequestParam Double lon) {
+        return ApiResponse.success(null, tideService.getDaily(lat, lon));
     }
 }

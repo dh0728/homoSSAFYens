@@ -1,6 +1,7 @@
 package com.homoSSAFYens.homSSAFYens.controller;
 
 import com.homoSSAFYens.homSSAFYens.client.AirApiClient;
+import com.homoSSAFYens.homSSAFYens.common.ApiResponse;
 import com.homoSSAFYens.homSSAFYens.service.AirService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,8 +20,8 @@ public class AirController {
     }
 
     @GetMapping("/test")
-    public String testAir() {
-        return airApiClient.testAir();
+    public ApiResponse<String> testAir() {
+        return ApiResponse.success(null, airApiClient.testAir());
     }
 
 
