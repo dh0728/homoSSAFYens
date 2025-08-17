@@ -50,7 +50,6 @@ public class TideApiClient {
      * @return String - (json)
      */
     public String testTide(double lat, double lon) {
-        log.info("TIDE key length={}", (apiKey == null ? 0 : apiKey.length()));
         return wc.get()
                 .uri(u -> u
                         .queryParam("key", apiKey)
