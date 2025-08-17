@@ -28,7 +28,7 @@ public class CurrentApiClient {
      * 특정지역의 물 떄, 간만조 시각 조회
      * @param lat 위도
      * @param lon 경도
-     * @return List<TideExternalDto> 7일치 값을 TideExternalDto로 1일씩 분리
+     * @return CurrentEnvelope
      */
     public CurrentEnvelope getCurrent(double lat, double lon) {
         return wc.get()
