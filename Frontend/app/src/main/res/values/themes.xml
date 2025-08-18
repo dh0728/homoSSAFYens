@@ -3,6 +3,9 @@
     <style name="Base.Theme.Dive" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your light theme here. -->
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <!-- 전체 기본 글씨체 -->
+        <item name="android:fontFamily">@font/pretendard</item>
+        <item name="fontFamily">@font/pretendard</item>
     </style>
 
     <style name="Theme.Dive" parent="Base.Theme.Dive" />
