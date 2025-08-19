@@ -1,0 +1,45 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#F8F8F8"
+    android:padding="12dp"
+    android:layout_marginBottom="8dp">
+
+    <!-- 날짜/요일/음력 -->
+    <TextView
+        android:id="@+id/tvDate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="2025-08-16 (토) · 음력 6-23"
+        android:textSize="15sp"
+        android:textStyle="bold"/>
+
+    <!-- 지역/물때 -->
+    <TextView
+        android:id="@+id/tvLocation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="남해 해운대 · 조금"
+        android:textSize="14sp"
+        android:paddingTop="4dp"/>
+
+    <!-- 일출/일몰, 월출/월몰 -->
+    <TextView
+        android:id="@+id/tvSunMoon"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="일출: 05:44 / 일몰: 19:11\n월출: 23:09 / 월몰: 13:11"
+        android:textSize="13sp"
+        android:paddingTop="4dp"/>
+
+    <!-- 하위 RV -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvDayEvents"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:nestedScrollingEnabled="false"
+        android:overScrollMode="never"
+        android:paddingTop="6dp"/>
+
+</LinearLayout>

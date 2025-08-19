@@ -1,0 +1,44 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="8dp"
+    android:background="#FFFFFF"
+    android:layout_marginBottom="8dp"
+    android:elevation="2dp">
+
+    <TextView
+        android:id="@+id/tvPointName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="포인트명"
+        android:textStyle="bold"
+        android:textSize="16sp"
+        android:paddingBottom="2dp"/>
+
+    <TextView
+        android:id="@+id/tvDepth"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="수심"/>
+
+    <TextView
+        android:id="@+id/tvMaterial"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="지형"/>
+
+    <TextView
+        android:id="@+id/tvFish"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="어종별 방법"
+        android:paddingTop="2dp"/>
+
+    <TextView
+        android:id="@+id/tvAddr"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="주소"
+        android:textColor="#666"/>
+</LinearLayout>

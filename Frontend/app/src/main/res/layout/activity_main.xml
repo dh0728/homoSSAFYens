@@ -117,7 +117,7 @@
             android:id="@+id/etSearch"
             android:layout_width="match_parent"
             android:layout_height="52dp"
-            android:hint="포인트, 지역, 수심 등 검색"
+            android:hint="바다 검색"
             android:imeOptions="actionSearch"/>
     </com.google.android.material.textfield.TextInputLayout>
 
@@ -137,56 +137,72 @@
 
         android:gravity="center"
         app:chipSpacingHorizontal="8dp"
-        app:chipSpacingVertical="4dp">
+        app:chipSpacingVertical="8dp">
 
-    <com.google.android.material.chip.Chip
-        android:id="@+id/chipTide1"
-        style="@style/Widget.Material3.Chip.Filter"
-        android:layout_width="110dp"
-        android:layout_height="36dp"
-        android:text="물때 1일"
-        android:gravity="center"/>
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipTide1"
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:minWidth="80dp"
+            android:text="물때 1일"
+            android:gravity="center"/>
 
-    <com.google.android.material.chip.Chip
-        android:id="@+id/chipTide7"
-        style="@style/Widget.Material3.Chip.Filter"
-        android:layout_width="110dp"
-        android:layout_height="36dp"
-        android:text="물때 7일"
-        android:gravity="center"/>
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipTide7"
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:minWidth="80dp"
+            android:text="물때 7일"
+            android:gravity="center"/>
 
-    <com.google.android.material.chip.Chip
-        android:id="@+id/chipWeather6h"
-        style="@style/Widget.Material3.Chip.Filter"
-        android:layout_width="110dp"
-        android:layout_height="36dp"
-        android:text="날씨 6시간"
-        android:gravity="center"/>
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipWeather6h"
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:minWidth="80dp"
+            android:text="날씨 6시간"
+            android:gravity="center"/>
 
-    <com.google.android.material.chip.Chip
-        android:id="@+id/chipWeather7"
-        style="@style/Widget.Material3.Chip.Filter"
-        android:layout_width="110dp"
-        android:layout_height="36dp"
-        android:text="날씨 7일"
-        android:gravity="center"/>
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipWeather7"
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:minWidth="80dp"
+            android:text="날씨 7일"
+            android:gravity="center"/>
 
-    <com.google.android.material.chip.Chip
-        android:id="@+id/chipTemp"
-        style="@style/Widget.Material3.Chip.Filter"
-        android:layout_width="110dp"
-        android:layout_height="36dp"
-        android:text="수온"
-        android:gravity="center"/>
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipTemp"
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:minWidth="80dp"
+            android:text="수온"
+            android:gravity="center"/>
 
-    <com.google.android.material.chip.Chip
-        android:id="@+id/chipFishing"
-        style="@style/Widget.Material3.Chip.Filter"
-        android:layout_width="110dp"
-        android:layout_height="36dp"
-        android:text="낚시포인트"
-        android:gravity="center"/>
-</com.google.android.material.chip.ChipGroup>
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipFishing"
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:minWidth="80dp"
+            android:text="낚시포인트"
+            android:gravity="center"/>
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipDust"
+            style="@style/Widget.Material3.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:minWidth="80dp"
+            android:text="미세먼지"
+            android:gravity="center"/>
+    </com.google.android.material.chip.ChipGroup>
+
 
     <!-- 리스트 자리: Fragment가 들어올 자리 -->
     <androidx.fragment.app.FragmentContainerView
