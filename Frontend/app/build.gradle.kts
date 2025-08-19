@@ -52,6 +52,7 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation(libs.play.services.location)
     implementation("com.google.android.gms:play-services-location:21.3.0")
+    implementation(libs.androidx.fragment)
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
@@ -66,4 +67,5 @@ dependencies {
     // OkHttp (네트워크 통신)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation ("androidx.fragment:fragment-ktx:1.6.2")
 }
