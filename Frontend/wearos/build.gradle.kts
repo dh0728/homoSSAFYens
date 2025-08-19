@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.wearos"
+    namespace = "com.example.dive"
     compileSdk = 35
 
     defaultConfig {

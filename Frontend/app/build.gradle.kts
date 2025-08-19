@@ -53,6 +53,7 @@ dependencies {
     implementation(libs.play.services.location)
     implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation(libs.androidx.fragment)
+    implementation(libs.fragment)
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

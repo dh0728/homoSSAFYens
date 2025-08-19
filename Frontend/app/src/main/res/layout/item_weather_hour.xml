@@ -1,0 +1,38 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="8dp"
+    android:background="@android:color/white"
+    android:layout_marginBottom="4dp"
+    android:elevation="2dp">
+
+    <TextView
+        android:id="@+id/tvHourTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="00:00"
+        android:textStyle="bold"
+        android:textSize="14sp"/>
+
+    <TextView
+        android:id="@+id/tvHourSkyTemp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="맑음 · 27℃"
+        android:textSize="13sp"/>
+
+    <TextView
+        android:id="@+id/tvHourWindWave"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="풍향: SW · 풍속: 2.5m/s · 파고: 0.18m"
+        android:textSize="13sp"/>
+
+    <TextView
+        android:id="@+id/tvHourHumidityRain"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="습도: 85% · 강수확률: 0%"
+        android:textSize="13sp"/>
+</LinearLayout>

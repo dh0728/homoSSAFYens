@@ -32,6 +32,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvNearestSub: TextView
     private lateinit var tvDate: TextView
     private lateinit var chipGroup: ChipGroup
+    private var lastLat: Double? = null
+    private var lastLon: Double? = null
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,9 +56,10 @@ class MainActivity : AppCompatActivity() {
                     R.id.chipTide1 -> replaceFragment(Tide1dayFragment())
                     R.id.chipTide7 -> replaceFragment(Tide7dayFragment())
                     R.id.chipWeather6h -> replaceFragment(Weather6hFragment())
-                    R.id.chipWeather7 -> replaceFragment(Weather7dayFragment())
+                    R.id.chipWeather7 -> replaceFragment(Weather7dFragment())
                     R.id.chipTemp -> replaceFragment(SeatempFragment())
                     R.id.chipFishing -> replaceFragment(FishingFragment())
+                    R.id.chipDust -> replaceFragment(FineDustFragment())
                 }
             }
         }
@@ -75,11 +79,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun replaceFragment(fragment: Fragment) {
-        supportFragmentManager.commit {
-            replace(R.id.fragmentContainer, fragment)
-        }
-    }
+
+
+
     private fun getCurrentLocationAndCallApi() {
         // 권한 체크
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -104,6 +106,9 @@ class MainActivity : AppCompatActivity() {
                 if (location != null) {
                     val lat = location.latitude
                     val lon = location.longitude
+                    lastLat = lat
+                    lastLon = lon
+
                     Log.d("Location", "lat=$lat, lon=$lon")
 
                     // API 호출
@@ -139,6 +144,20 @@ class MainActivity : AppCompatActivity() {
             }
     }
 
+    // 위도경도 fragment로 다 넘겨주기
+    private fun replaceFragment(fragment: Fragment) {
+        val bundle = Bundle().apply {
+            lastLat?.let { putDouble("lat", it) }
+            lastLon?.let { putDouble("lon", it) }
+        }
+        fragment.arguments = bundle
+        Log.d("MainActivity", "전달할 위경도: $lastLat, $lastLon")
+
+        supportFragmentManager.commit {
+            replace(R.id.fragmentContainer, fragment)
+        }
+    }
+
     // 권한 허용 후 다시 시도
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -152,4 +171,6 @@ class MainActivity : AppCompatActivity() {
             getCurrentLocationAndCallApi()
         }
     }
+
+
 }

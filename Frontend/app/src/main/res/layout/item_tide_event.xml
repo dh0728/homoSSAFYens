@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="8dp"
+    android:background="?attr/selectableItemBackground">
+
+    <!-- 시간 -->
+    <TextView
+        android:id="@+id/tvTime"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="06:24"
+        android:textSize="14sp"
+        android:gravity="center"/>
+
+    <!-- 조위 -->
+    <TextView
+        android:id="@+id/tvLevel"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="35 cm (FALLING)"
+        android:textSize="14sp"
+        android:gravity="center"/>
+
+    <!-- 변화량 -->
+    <TextView
+        android:id="@+id/tvDelta"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="-56"
+        android:textSize="14sp"
+        android:gravity="center"
+        android:textColor="@android:color/holo_red_dark"/>
+</LinearLayout>
