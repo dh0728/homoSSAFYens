@@ -1,0 +1,44 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="#F9F9F9">
+
+    <TextView
+        android:id="@+id/tvIntro"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="소개"
+        android:textStyle="bold"
+        android:padding="4dp"/>
+
+    <TextView
+        android:id="@+id/tvForecast"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="예보"
+        android:padding="4dp"/>
+
+    <TextView
+        android:id="@+id/tvEbbf"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="조류"
+        android:padding="4dp"/>
+
+    <TextView
+        android:id="@+id/tvNotice"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="주의사항"
+        android:padding="4dp"
+        android:textColor="#B71C1C"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvPoints"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="8dp"/>
+</LinearLayout>
