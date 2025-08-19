@@ -63,11 +63,28 @@ public class WebClientConfig {
         return builder
                 .uriBuilderFactory(f)
                 .baseUrl(p.getBaseUrl())
-                .filter((req, next) -> {
-                    log.info("AIR REQ {} {}", req.method(), req.url()); // 최종 URL 확인
-                    return next.exchange(req);
-                })
+//                .filter((req, next) -> {
+//                    log.info("AIR REQ {} {}", req.method(), req.url()); // 최종 URL 확인
+//                    return next.exchange(req);
+//                })
                 .clientConnector(new ReactorClientHttpConnector(http))
                 .build();
     }
+
+    @Bean @Qualifier("sgisWebClient")
+    public WebClient sgisKeyWebClient(WebClient.Builder builder, ClientProperties props) {
+        ClientProperties.Sgis p = props.getSgis();
+
+        HttpClient http = HttpClient.create()
+                .responseTimeout(Duration.ofMillis(p.getTimeoutMs() == null ? 3000 : p.getTimeoutMs()));
+
+        return builder
+                .baseUrl(p.getBaseUrl())
+                .clientConnector(new ReactorClientHttpConnector(http))
+                .build();
+
+
+    }
+
+
 }
