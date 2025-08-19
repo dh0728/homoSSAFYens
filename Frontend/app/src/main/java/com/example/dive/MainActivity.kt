@@ -10,22 +10,28 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.fragment.app.Fragment
 import com.example.dive.data.api.RetrofitClient
 import com.example.dive.data.model.TideResponse
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.fragment.app.commit
+
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var tvNearestSub: TextView
     private lateinit var tvDate: TextView
+    private lateinit var chipGroup: ChipGroup
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,6 +42,23 @@ class MainActivity : AppCompatActivity() {
         tvNearestSub = findViewById(R.id.tvNearestSub)
         tvDate = findViewById(R.id.tvDate)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        chipGroup = findViewById(R.id.chipGroup)
+        // chip 클릭 리스너
+        chipGroup.setOnCheckedStateChangeListener { group, checkedIds ->
+            if (checkedIds.isNotEmpty()) {
+                val chipId = checkedIds[0]
+                val chip = findViewById<Chip>(chipId)
+
+                when (chip.id) {
+                    R.id.chipTide1 -> replaceFragment(Tide1dayFragment())
+                    R.id.chipTide7 -> replaceFragment(Tide7dayFragment())
+                    R.id.chipWeather6h -> replaceFragment(Weather6hFragment())
+                    R.id.chipWeather7 -> replaceFragment(Weather7dayFragment())
+                    R.id.chipTemp -> replaceFragment(SeatempFragment())
+                    R.id.chipFishing -> replaceFragment(FishingFragment())
+                }
+            }
+        }
 
         // 오늘 날짜 표시
         val today = Calendar.getInstance().time
@@ -52,6 +75,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun replaceFragment(fragment: Fragment) {
+        supportFragmentManager.commit {
+            replace(R.id.fragmentContainer, fragment)
+        }
+    }
     private fun getCurrentLocationAndCallApi() {
         // 권한 체크
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
