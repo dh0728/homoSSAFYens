@@ -3,10 +3,12 @@ package com.homoSSAFYens.homSSAFYens.service;
 
 import com.homoSSAFYens.homSSAFYens.client.AirApiClient;
 import com.homoSSAFYens.homSSAFYens.client.SgisApiClient;
+import com.homoSSAFYens.homSSAFYens.common.GeoKeyUtil;
 import com.homoSSAFYens.homSSAFYens.dto.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -16,14 +18,29 @@ public class AirService {
 
     private final AirApiClient airApiClient;
     private final SgisApiClient sgisApiClient;
+    private final CacheService cacheService;
 
-    public AirService(AirApiClient airApiClient ,SgisApiClient sgisApiClient) {
+    private static final int GEO_DECIMALS = 3; // ≈110m
+    private static final Duration TTL = Duration.ofMinutes(30);
+
+
+    public AirService(AirApiClient airApiClient ,
+                      SgisApiClient sgisApiClient,
+                      CacheService cacheService
+                      ) {
         this.airApiClient = airApiClient;
         this.sgisApiClient = sgisApiClient;
+        this.cacheService = cacheService;
 
     }
 
     public FineDustResponse getAirInfo(double lat, double lon) {
+
+        final String geo = GeoKeyUtil.geoKey(lat, lon, GEO_DECIMALS);
+        final String key = "air:" + geo + ":" + GeoKeyUtil.dayKST();
+
+        FineDustResponse cached = cacheService.get(key, FineDustResponse.class);
+        if (cached != null) return cached;
 
         // 1) 좌표 변환 (WGS84 → EPSG:5186 TM)
         SgisTranscoordResponse transcoordRes = sgisApiClient.getSgisRgeocode(lat, lon);
@@ -76,8 +93,12 @@ public class AirService {
                 .max(Comparator.comparing(AirItemDto::dataTime)) // "yyyy-MM-dd HH:mm" 문자열 비교로도 정렬 가능
                 .orElse(null);
 
+        FineDustResponse resp = toFineDustResponse(latest, stationName);
 
-        return toFineDustResponse(latest, stationName);
+        // ── 4) air 캐시 저장 (geoKey 기준) ─────────────────────────────
+        cacheService.set(key, resp, TTL);
+
+        return resp;
     }
 
     private FineDustResponse toFineDustResponse(AirItemDto item, String stationName) {
