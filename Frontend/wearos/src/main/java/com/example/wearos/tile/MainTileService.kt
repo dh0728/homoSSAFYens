@@ -1,4 +1,4 @@
-package com.example.wearos.tile
+package com.example.dive.tile
 
 import android.content.Context
 import androidx.wear.protolayout.ColorBuilders.argb

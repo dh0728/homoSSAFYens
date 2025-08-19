@@ -1,4 +1,4 @@
-package com.example.wearos.presentation.theme
+package com.example.dive.presentation.theme
 
 import androidx.compose.runtime.Composable
 import androidx.wear.compose.material.MaterialTheme

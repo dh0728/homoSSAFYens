@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.wearos"
+    namespace = "com.example.dive"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.wearos"
+        applicationId = "com.example.dive"
         minSdk = 30
         targetSdk = 35
         versionCode = 1
