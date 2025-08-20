@@ -1,6 +1,7 @@
 package com.example.dive
 
 import android.Manifest
+import android.os.Build
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
@@ -11,6 +12,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.commit
 import com.example.dive.data.api.RetrofitClient
 import com.example.dive.data.model.TideResponse
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -23,8 +25,6 @@ import retrofit2.Callback
 import retrofit2.Response
 import java.text.SimpleDateFormat
 import java.util.*
-import androidx.fragment.app.commit
-
 
 class MainActivity : AppCompatActivity() {
 
@@ -34,7 +34,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var chipGroup: ChipGroup
     private var lastLat: Double? = null
     private var lastLon: Double? = null
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,6 +45,7 @@ class MainActivity : AppCompatActivity() {
         tvDate = findViewById(R.id.tvDate)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         chipGroup = findViewById(R.id.chipGroup)
+
         // chip 클릭 리스너
         chipGroup.setOnCheckedStateChangeListener { group, checkedIds ->
             if (checkedIds.isNotEmpty()) {
@@ -72,15 +72,27 @@ class MainActivity : AppCompatActivity() {
         // 위치 기반 API 호출
         getCurrentLocationAndCallApi()
 
+        // 알림 권한 요청 (Android 13 이상)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ActivityCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    102
+                )
+            }
+        }
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
     }
-
-
-
 
     private fun getCurrentLocationAndCallApi() {
         // 권한 체크
@@ -93,7 +105,9 @@ class MainActivity : AppCompatActivity() {
                 this,
                 arrayOf(
                     Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission.SEND_SMS,
+                    Manifest.permission.CALL_PHONE
                 ),
                 100
             )
@@ -165,12 +179,26 @@ class MainActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 100 && grantResults.isNotEmpty() &&
-            grantResults[0] == PackageManager.PERMISSION_GRANTED
-        ) {
-            getCurrentLocationAndCallApi()
+        if (requestCode == 100) {
+            var allPermissionsGranted = true
+            for (result in grantResults) {
+                if (result != PackageManager.PERMISSION_GRANTED) {
+                    allPermissionsGranted = false
+                    break
+                }
+            }
+            if (allPermissionsGranted) {
+                getCurrentLocationAndCallApi()
+            } else {
+                // Handle case where not all permissions are granted
+                Log.e("MainActivity", "Not all permissions granted.")
+            }
+        } else if (requestCode == 102) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d("MainActivity", "Notification permission granted.")
+            } else {
+                Log.e("MainActivity", "Notification permission denied.")
+            }
         }
     }
-
-
 }
