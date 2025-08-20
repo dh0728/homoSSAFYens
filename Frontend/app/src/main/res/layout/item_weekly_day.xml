@@ -2,9 +2,15 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="#F8F8F8"
+    android:background="@color/white"
     android:padding="12dp"
     android:layout_marginBottom="8dp">
+
+<!--    &lt;!&ndash; 위쪽 구분선 &ndash;&gt;-->
+<!--    <View-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="1dp"-->
+<!--        android:background="#E0E0E0" />-->
 
     <!-- 날짜/요일/음력 -->
     <TextView
@@ -13,7 +19,10 @@
         android:layout_height="wrap_content"
         android:text="2025-08-16 (토) · 음력 6-23"
         android:textSize="15sp"
-        android:textStyle="bold"/>
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_gravity="center"
+        android:paddingTop="8dp"/>
 
     <!-- 지역/물때 -->
     <TextView
@@ -21,6 +30,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="남해 해운대 · 조금"
+        android:gravity="center"
         android:textSize="14sp"
         android:paddingTop="4dp"/>
 
@@ -31,7 +41,9 @@
         android:layout_height="wrap_content"
         android:text="일출: 05:44 / 일몰: 19:11\n월출: 23:09 / 월몰: 13:11"
         android:textSize="13sp"
-        android:paddingTop="4dp"/>
+        android:gravity="center"
+        android:paddingTop="4dp"
+        android:lineSpacingExtra="4dp"/>
 
     <!-- 하위 RV -->
     <androidx.recyclerview.widget.RecyclerView
@@ -41,5 +53,11 @@
         android:nestedScrollingEnabled="false"
         android:overScrollMode="never"
         android:paddingTop="6dp"/>
+    <!-- 아래쪽 구분선 -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#E0E0E0"
+        android:layout_marginTop="8dp"/>
 
 </LinearLayout>

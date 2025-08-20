@@ -43,6 +43,25 @@ class Tide7dayFragment : Fragment() {
         return view
     }
 
+    // HH:mm:ss → HH:mm
+    private fun formatTime(raw: String): String {
+        return try {
+            raw.substring(0, 5)
+        } catch (e: Exception) {
+            raw
+        }
+    }
+
+    // RISING/FALLING → 한글 변환
+    private fun convertTrend(raw: String): String {
+        return when (raw.uppercase()) {
+            "RISING" -> "만조"
+            "FALLING" -> "간조"
+            else -> raw
+        }
+    }
+
+
     private fun loadWeeklyTide() {
         if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
             != PackageManager.PERMISSION_GRANTED &&
@@ -74,7 +93,20 @@ class Tide7dayFragment : Fragment() {
                             ) {
                                 if (response.isSuccessful) {
                                     val weekly = response.body()?.data ?: return
-                                    adapter.updateWeekly(weekly)
+
+                                    // 변환: 시간 HH:mm, 추세 한글화
+                                    val convertedWeekly = weekly.map { day ->
+                                        day.copy(
+                                            events = day.events.map { event ->
+                                                event.copy(
+                                                    time = formatTime(event.time),
+                                                    trend = convertTrend(event.trend)
+                                                )
+                                            }
+                                        )
+                                    }
+
+                                    adapter.updateWeekly(convertedWeekly)
                                 } else {
                                     Log.e("Tide7day", "응답 실패: ${response.code()}")
                                 }

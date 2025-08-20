@@ -1,44 +1,76 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="12dp"
-    android:background="#F9F9F9">
+    android:fillViewport="true"
+    android:background="@android:color/white">
 
-    <TextView
-        android:id="@+id/tvIntro"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="소개"
-        android:textStyle="bold"
-        android:padding="4dp"/>
+        android:orientation="vertical"
+        android:padding="12dp">
 
-    <TextView
-        android:id="@+id/tvForecast"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="예보"
-        android:padding="4dp"/>
+        <!-- 소개 (클릭 가능한 헤더) -->
+        <TextView
+            android:id="@+id/tvIntroHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="수영만 부근 소개"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:padding="8dp"
+            android:background="#EEEEEE"/>
 
-    <TextView
-        android:id="@+id/tvEbbf"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="조류"
-        android:padding="4dp"/>
+        <!-- 상세 내용 (기본 GONE) -->
+        <LinearLayout
+            android:id="@+id/layoutDetails"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:padding="8dp">
 
-    <TextView
-        android:id="@+id/tvNotice"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="주의사항"
-        android:padding="4dp"
-        android:textColor="#B71C1C"/>
+            <TextView
+                android:id="@+id/tvIntro"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="소개 내용"/>
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvPoints"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginTop="8dp"/>
-</LinearLayout>
+            <TextView
+                android:id="@+id/tvForecast"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🌤 예보: "
+                android:paddingTop="8dp"
+                android:textSize="13sp"/>
+
+            <!-- 조류 -->
+            <TextView
+                android:id="@+id/tvEbbf"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🌊 조류: "
+                android:paddingTop="8dp"
+                android:textSize="13sp"/>
+
+            <!-- 주의사항 -->
+            <TextView
+                android:id="@+id/tvNotice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="⚠️ 주의사항: "
+                android:textColor="#B71C1C"
+                android:paddingTop="8dp"
+                android:textSize="13sp"/>
+        </LinearLayout>
+
+        <!-- 낚시 포인트 리스트 -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvPoints"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:nestedScrollingEnabled="false"
+            android:overScrollMode="never"
+            android:layout_marginTop="12dp"/>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

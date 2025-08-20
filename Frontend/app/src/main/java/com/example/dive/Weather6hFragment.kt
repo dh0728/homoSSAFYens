@@ -21,11 +21,22 @@ class Weather6hFragment : Fragment() {
     private lateinit var rvWeather: RecyclerView
     private lateinit var adapter: Weather6hAdapter
 
+    // 현재 날씨 뷰
+    private lateinit var tvCurrentTemp: TextView
+    private lateinit var tvCurrentSky: TextView
+    private lateinit var tvCurrentEtc: TextView
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
         val view = inflater.inflate(R.layout.fragment_weather6h, container, false)
+
+        // 현재 날씨 뷰 초기화
+        tvCurrentTemp = view.findViewById(R.id.tvCurrentTemp)
+        tvCurrentSky = view.findViewById(R.id.tvCurrentSky)
+        tvCurrentEtc = view.findViewById(R.id.tvCurrentEtc)
+
 
         tvCity = view.findViewById(R.id.tvCity6h)
         rvWeather = view.findViewById(R.id.rvWeather6h)
@@ -36,6 +47,20 @@ class Weather6hFragment : Fragment() {
         loadWeatherData()
 
         return view
+    }
+
+    // ✅ sky → emoji 매핑 함수
+    private fun getWeatherEmojiFromSky(sky: String): String {
+        return when {
+            sky.contains("맑음") -> "☀️"
+            sky.contains("구름많음") -> "☁️"
+            sky.contains("구름조금") -> "🌤️"
+            sky.contains("흐림") -> "☁️"
+            sky.contains("비/눈") -> "🌧️"
+            sky.contains("비") -> "🌧️"
+            sky.contains("눈") -> "🌨️"
+            else -> "❔"
+        }
     }
 
     private fun loadWeatherData() {
@@ -58,8 +83,25 @@ class Weather6hFragment : Fragment() {
                 ) {
                     if (response.isSuccessful) {
                         val body = response.body() ?: return
+                        val weatherList = body.data.weather
+
+                        if (weatherList.isNotEmpty()) {
+                            val current = weatherList[0]
+
+                            val temp = current.tempC.toString().toDoubleOrNull()?.toInt() ?: current.tempC
+                            val humidity = current.humidityPct.toString().toDoubleOrNull()?.toInt() ?: current.humidityPct
+                            val wind = current.windSpeedMs.toString().toDoubleOrNull()?.toInt() ?: current.windSpeedMs
+
+                            val emoji = getWeatherEmojiFromSky(current.sky)
+
+                            tvCurrentTemp.text = "${temp}℃"
+                            tvCurrentSky.text = "$emoji ${current.sky}"
+                            tvCurrentEtc.text = "습도 ${humidity}% · 풍속 ${wind}m/s"
+
+                            adapter.updateWeather(weatherList.drop(1))
+                        }
+
                         tvCity.text = body.data.info.city
-                        adapter.updateWeather(body.data.weather)
                     } else {
                         Log.e("Weather6h", "응답 실패: ${response.code()}")
                     }
