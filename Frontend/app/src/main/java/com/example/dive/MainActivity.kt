@@ -12,6 +12,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.commit
 import com.example.dive.data.api.RetrofitClient
 import com.example.dive.data.model.TideResponse
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -24,13 +25,6 @@ import retrofit2.Callback
 import retrofit2.Response
 import java.text.SimpleDateFormat
 import java.util.*
-import androidx.fragment.app.commit
-import androidx.lifecycle.ViewModelProvider
-import com.google.android.material.snackbar.Snackbar
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
-import com.example.dive.presentation.MainViewModel
-
 
 class MainActivity : AppCompatActivity() {
 
@@ -41,21 +35,17 @@ class MainActivity : AppCompatActivity() {
     private var lastLat: Double? = null
     private var lastLon: Double? = null
 
-    private lateinit var viewModel: MainViewModel
-
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d("MainActivity", "앱 실행됨!")
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
 
-        viewModel = ViewModelProvider(this).get(MainViewModel::class.java)
-
         tvNearestSub = findViewById(R.id.tvNearestSub)
         tvDate = findViewById(R.id.tvDate)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         chipGroup = findViewById(R.id.chipGroup)
+
         // chip 클릭 리스너
         chipGroup.setOnCheckedStateChangeListener { group, checkedIds ->
             if (checkedIds.isNotEmpty()) {
@@ -102,21 +92,7 @@ class MainActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
-
-        // Observe phone connection status
-        lifecycleScope.launch {
-            viewModel.phoneConnected.collect {
-                if (!it) {
-                    Snackbar.make(findViewById(R.id.main), "폰과 연결이 끊어졌습니다.", Snackbar.LENGTH_INDEFINITE).show()
-                } else {
-                    Snackbar.make(findViewById(R.id.main), "폰과 연결되었습니다.", Snackbar.LENGTH_SHORT).show()
-                }
-            }
-        }
     }
-
-
-
 
     private fun getCurrentLocationAndCallApi() {
         // 권한 체크
@@ -197,7 +173,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // 권한 허용 후 다시 시도
-        override fun onRequestPermissionsResult(
+    override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
         grantResults: IntArray
@@ -225,7 +201,4 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
-
 }
-

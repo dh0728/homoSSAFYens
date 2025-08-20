@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.dive"
-        minSdk = 24
+        minSdk = 30
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -52,6 +52,7 @@ dependencies {
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation(libs.play.services.location)
     implementation("com.google.android.gms:play-services-wearable:18.2.0")
+    implementation("androidx.fragment:fragment-ktx:1.6.2")
     implementation(libs.androidx.fragment)
 
     testImplementation("junit:junit:4.13.2")
@@ -67,4 +68,5 @@ dependencies {
     // OkHttp (네트워크 통신)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
 }
