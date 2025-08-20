@@ -29,6 +29,13 @@ sealed interface WeatherUiState {
     object Loading : WeatherUiState
 }
 
+// Detailed Weather UI 상태
+sealed interface DetailedWeatherUiState {
+    data class Success(val weatherData: Weather7dData) : DetailedWeatherUiState
+    object Error : DetailedWeatherUiState
+    object Loading : DetailedWeatherUiState
+}
+
 // Fishing Points UI 상태
 sealed interface FishingPointsUiState {
     data class Success(val fishingData: FishingData) : FishingPointsUiState
@@ -36,12 +43,6 @@ sealed interface FishingPointsUiState {
     object Loading : FishingPointsUiState
 }
 
-// Detailed Weather UI 상태
-sealed interface DetailedWeatherUiState {
-    data class Success(val weatherData: Weather7dData) : DetailedWeatherUiState
-    object Error : DetailedWeatherUiState
-    object Loading : DetailedWeatherUiState
-}
 
 // Emergency UI 상태
 sealed interface EmergencyUiState {
@@ -111,15 +112,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         viewModelScope.launch {
-            watchDataRepository.getFishingPoints()
-                .catch { _fishingPointsUiState.value = FishingPointsUiState.Error }
-                .collect { _fishingPointsUiState.value = FishingPointsUiState.Success(it.data) }
-        }
-
-        viewModelScope.launch {
             watchDataRepository.getWeather7dData()
                 .catch { _detailedWeatherUiState.value = DetailedWeatherUiState.Error }
                 .collect { _detailedWeatherUiState.value = DetailedWeatherUiState.Success(it.data) }
+        }
+
+        viewModelScope.launch {
+            watchDataRepository.getFishingPoints()
+                .catch { _fishingPointsUiState.value = FishingPointsUiState.Error }
+                .collect { _fishingPointsUiState.value = FishingPointsUiState.Success(it.data) }
         }
 
         // Emergency
