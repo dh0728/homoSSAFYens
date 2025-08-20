@@ -24,9 +24,18 @@ class TideEventAdapter(private var items: List<TideEvent>) :
 
     override fun onBindViewHolder(holder: TideViewHolder, position: Int) {
         val item = items[position]
+
         holder.tvTime.text = item.time
         holder.tvLevel.text = "${item.levelCm} cm (${item.trend})"
-        holder.tvDelta.text = if (item.deltaCm >= 0) "+${item.deltaCm}" else "${item.deltaCm}"
+
+        // delta 표시 + 색상
+        if (item.deltaCm >= 0) {
+            holder.tvDelta.text = "+${item.deltaCm}"
+            holder.tvDelta.setTextColor(android.graphics.Color.parseColor("#2E7D32")) // 초록
+        } else {
+            holder.tvDelta.text = "${item.deltaCm}"
+            holder.tvDelta.setTextColor(android.graphics.Color.RED) // 빨강
+        }
     }
 
     override fun getItemCount(): Int = items.size
