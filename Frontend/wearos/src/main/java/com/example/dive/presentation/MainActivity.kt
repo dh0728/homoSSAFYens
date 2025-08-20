@@ -48,15 +48,15 @@ class MainActivity : ComponentActivity() {
             DiveTheme {
                 val tideUiState by viewModel.tideUiState.collectAsState()
                 val weatherUiState by viewModel.weatherUiState.collectAsState()
-                val fishingPointsUiState by viewModel.fishingPointsUiState.collectAsState()
                 val detailedWeatherUiState by viewModel.detailedWeatherUiState.collectAsState()
+                val fishingPointsUiState by viewModel.fishingPointsUiState.collectAsState()
                 val emergencyUiState by viewModel.emergencyUiState.collectAsState()
 
                 MainApp(
                     tideUiState = tideUiState,
                     weatherUiState = weatherUiState,
-                    fishingPointsUiState = fishingPointsUiState,
                     detailedWeatherUiState = detailedWeatherUiState,
+                    fishingPointsUiState = fishingPointsUiState,
                     emergencyUiState = emergencyUiState
                 )
             }
@@ -89,8 +89,8 @@ class MainActivity : ComponentActivity() {
 fun MainApp(
     tideUiState: TideUiState,
     weatherUiState: WeatherUiState,
-    fishingPointsUiState: FishingPointsUiState,
     detailedWeatherUiState: DetailedWeatherUiState,
+    fishingPointsUiState: FishingPointsUiState,
     emergencyUiState: EmergencyUiState
 ) {
     val pagerState = rememberPagerState(pageCount = { 6 })
@@ -123,8 +123,8 @@ fun MainApp(
                 when (page) {
                     0 -> TideScreen(uiState = tideUiState)
                     1 -> WeatherScreen(uiState = weatherUiState)
-                    2 -> FishingPointsScreen(uiState = fishingPointsUiState)
-                    3 -> DetailedWeatherScreen(uiState = detailedWeatherUiState)
+                    2 -> DetailedWeatherScreen(uiState = detailedWeatherUiState)
+                    3 -> FishingPointsScreen(uiState = fishingPointsUiState)
                     4 -> EmergencyScreen(uiState = emergencyUiState)
                     5 -> SettingsScreen()
                 }
