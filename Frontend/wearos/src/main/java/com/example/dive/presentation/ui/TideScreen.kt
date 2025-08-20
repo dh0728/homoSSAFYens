@@ -1,10 +1,8 @@
+
 package com.example.dive.presentation.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -14,7 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.CircularProgressIndicator
@@ -59,50 +57,76 @@ fun TideInfoCard(tideData: TideData) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .padding(horizontal = 4.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        // 상단 바 - 둥근 회색 배경
+        Spacer(modifier = Modifier.height(1.dp))
+
+        // 상단 바
         TopBar(date = tideData.date, weekday = tideData.weekday)
 
-        // 메인 타이틀 - 좌측 정렬
+        // 메인 타이틀
         Row(
             modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = tideData.locationName,
-                style = MaterialTheme.typography.title1,
+                style = MaterialTheme.typography.title2,
                 color = TextPrimary
             )
             Spacer(modifier = Modifier.width(6.dp))
-            // 노란 원형 아이콘
             Box(
                 modifier = Modifier
                     .size(14.dp)
                     .clip(CircleShape)
                     .background(AccentYellow)
             )
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(1.dp))
             Text(
-                text = tideData.mul, // "3물"
-                style = MaterialTheme.typography.title1,
+                text = tideData.mul,
+                style = MaterialTheme.typography.title2,
                 color = AccentYellow
             )
         }
 
-        // 4분할 그리드 레이아웃 (2열)
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            modifier = Modifier
-                .fillMaxSize(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        Spacer(modifier = Modifier.height(1.dp))
+
+        // 2 x 2 배치 (Row + Column)
+        Column(
             verticalArrangement = Arrangement.spacedBy(4.dp),
-            userScrollEnabled = true
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 0.dp)
         ) {
-            items(tideData.events) { event ->
-                TideEventCell(event = event)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                TideEventCell(
+                    event = tideData.events[0],
+                    modifier = Modifier.weight(0.45f)
+                )
+                TideEventCell(
+                    event = tideData.events[1],
+                    modifier = Modifier.weight(0.45f)
+                )
+            }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                TideEventCell(
+                    event = tideData.events[2],
+                    modifier = Modifier.weight(0.45f)
+                )
+                TideEventCell(
+                    event = tideData.events[3],
+                    modifier = Modifier.weight(0.45f)
+                )
             }
         }
     }
@@ -113,14 +137,13 @@ fun TopBar(date: String, weekday: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(BackgroundSecondary)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .clip(RoundedCornerShape(10.dp))
+            .padding(horizontal = 10.dp, vertical = 2.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "$date ($weekday)", // "07.22 (화)"
+            text = "$date ($weekday)",
             style = MaterialTheme.typography.body2,
             color = TextSecondary,
             textAlign = TextAlign.Center
@@ -129,12 +152,15 @@ fun TopBar(date: String, weekday: String) {
 }
 
 @Composable
-fun TideEventCell(event: TideEvent) {
-    val backgroundColor = when (event.trend) {
-        "만조" -> AccentRed.copy(alpha = 0.3f)
-        "간조" -> AccentBlue.copy(alpha = 0.3f)
-        else -> BackgroundSecondary.copy(alpha = 0.3f)
+fun TideEventCell(event: TideEvent, modifier: Modifier = Modifier) {
+    val trendLabel = when (event.trend.uppercase()) {
+        "RISING" -> "만조"
+        "FALLING" -> "간조"
+        else -> event.trend
     }
+
+    // 🔹 배경은 회색 그대로 유지
+    val backgroundColor = BackgroundSecondary.copy(alpha = 0.8f)
 
     val arrowColor = when {
         event.deltaCm == null -> TextSecondary
@@ -149,58 +175,60 @@ fun TideEventCell(event: TideEvent) {
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
             .background(backgroundColor)
-            .padding(8.dp),
+            .padding(6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // 상단 배지(만조/간조)
+        // 상단 배지
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(6.dp))
+                .clip(RoundedCornerShape(12.dp))
                 .background(
-                    when (event.trend) {
+                    when (trendLabel) {
                         "만조" -> AccentRed
                         "간조" -> AccentBlue
                         else -> TextTertiary
                     }
                 )
-                .padding(horizontal = 6.dp, vertical = 2.dp)
+                .padding(horizontal = 4.dp, vertical = 2.dp)
         ) {
             Text(
-                text = event.trend, // "만조" or "간조"
-                style = MaterialTheme.typography.caption1,
+                text = trendLabel,
+                style = MaterialTheme.typography.caption1.copy(fontWeight = FontWeight.SemiBold),
                 color = TextPrimary
             )
         }
 
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(2.dp))
 
         // 시간
         Text(
-            text = event.time, // "00:06"
-            style = MaterialTheme.typography.body1,
+            text = event.time,
+            style = MaterialTheme.typography.title3,
             color = TextPrimary
         )
 
-        // 수치 (레벨)
-        Text(
-            text = "(${event.levelCm})",
-            style = MaterialTheme.typography.body2,
-            color = TextSecondary
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "(${event.levelCm})",
+                style = MaterialTheme.typography.caption1,
+                color = TextSecondary
+            )
 
-        // 변화량 (아이콘 + 숫자)
-        Row(verticalAlignment = Alignment.CenterVertically) {
+            Spacer(Modifier.width(4.dp))
+
             if (arrowIcon != null) {
                 Icon(
                     imageVector = arrowIcon,
-                    contentDescription = event.trend,
+                    contentDescription = trendLabel,
                     tint = arrowColor,
-                    modifier = Modifier.size(12.dp)
+                    modifier = Modifier.size(14.dp)
                 )
                 Spacer(Modifier.width(2.dp))
             }
