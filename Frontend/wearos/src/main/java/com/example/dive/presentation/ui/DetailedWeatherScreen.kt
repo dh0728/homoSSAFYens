@@ -11,6 +11,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.CircularProgressIndicator
 import androidx.wear.compose.material.MaterialTheme
+import androidx.wear.compose.material.ScalingLazyColumn
 import androidx.wear.compose.material.Text
 import com.example.dive.data.model.Weather7dData
 import com.example.dive.presentation.DetailedWeatherUiState
@@ -49,80 +50,93 @@ fun DetailedWeatherScreen(uiState: DetailedWeatherUiState) {
 
 @Composable
 fun DetailedWeatherInfoCard(weatherData: Weather7dData) {
-    val currentDateTime = SimpleDateFormat("HH시 mm분", Locale.getDefault()).format(Date())
-    val todayWeather = weatherData.days.firstOrNull()?.hours?.firstOrNull()
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ScalingLazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            top = 24.dp,
+            start = 8.dp,
+            end = 8.dp,
+            bottom = 40.dp
+        ),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // 상단 바 (간단)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(BackgroundSecondary)
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val date = SimpleDateFormat("MM.dd", Locale.getDefault()).format(Date())
-            val weekday = SimpleDateFormat("E", Locale.getDefault()).format(Date())
+        item {
             Text(
-                text = "$date ($weekday)",
-                style = MaterialTheme.typography.body2,
-                color = TextSecondary,
-                textAlign = TextAlign.Center
+                text = "주간 날씨",
+                style = MaterialTheme.typography.title2,
+                color = TextPrimary
             )
+            Spacer(modifier = Modifier.height(12.dp))
         }
 
-        Text(
-            text = currentDateTime,
-            style = MaterialTheme.typography.title2,
-            color = TextPrimary,
-            modifier = Modifier.fillMaxWidth(),
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        if (todayWeather != null) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            ) {
-                DetailRow("날씨", todayWeather.sky, "풍향", todayWeather.winddir)
-                DetailRow("기온", "${todayWeather.temp}°", "풍속", "${todayWeather.windspd}m/s")
-                DetailRow("강수량", "${todayWeather.rainAmt}mm", "파고", "${todayWeather.waveHt ?: "-"}m")
-                DetailRow("습도", "${todayWeather.humidity}%", "", "")
+        weatherData.days.forEach { day ->
+            item {
+                DayWeatherCard(day = day)
             }
-        } else {
-            Text(text = "상세 날씨 정보 없음", color = TextSecondary)
         }
     }
 }
 
 @Composable
-fun DetailRow(label1: String, value1: String, label2: String, value2: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+fun DayWeatherCard(day: com.example.dive.data.model.WeatherDay) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(BackgroundSecondary)
+            .padding(12.dp)
     ) {
-        Column(horizontalAlignment = Alignment.Start) {
-            Text(text = label1, style = MaterialTheme.typography.caption1, color = TextTertiary)
-            Text(text = value1, style = MaterialTheme.typography.body2, color = TextPrimary)
+        // Date Header
+        val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.KOREA)
+        val outputFormat = SimpleDateFormat("MM월 dd일 (E)", Locale.KOREA)
+        val date = inputFormat.parse(day.date)
+        Text(
+            text = outputFormat.format(date),
+            style = MaterialTheme.typography.title3,
+            color = TextPrimary,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            textAlign = TextAlign.Center
+        )
+
+        // Table Header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(text = "시간", style = MaterialTheme.typography.caption1, color = TextTertiary, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+            Text(text = "날씨", style = MaterialTheme.typography.caption1, color = TextTertiary, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+            Text(text = "기온", style = MaterialTheme.typography.caption1, color = TextTertiary, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+            Text(text = "강수", style = MaterialTheme.typography.caption1, color = TextTertiary, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
         }
-        if (label2.isNotEmpty()) {
-            Column(horizontalAlignment = Alignment.Start) {
-                Text(text = label2, style = MaterialTheme.typography.caption1, color = TextTertiary)
-                Text(text = value2, style = MaterialTheme.typography.body2, color = TextPrimary)
-            }
+
+        // Table Rows
+        day.hours.forEach { hour ->
+            HourlyWeatherRow(hour = hour)
         }
     }
-    Spacer(modifier = Modifier.height(4.dp))
+}
+
+@Composable
+fun HourlyWeatherRow(hour: com.example.dive.data.model.WeatherHour) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.KOREA)
+        val date = inputFormat.parse(hour.time)
+        val hourString = SimpleDateFormat("HH시", Locale.KOREA).format(date)
+
+        Text(text = hourString, style = MaterialTheme.typography.body2, color = TextPrimary, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+        Text(text = getWeatherEmojiFromSky(hour.sky), style = MaterialTheme.typography.body2, color = TextPrimary, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+        Text(text = "${hour.temp}°", style = MaterialTheme.typography.body2, color = TextPrimary, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+        Text(text = "${hour.rainAmt}mm", style = MaterialTheme.typography.body2, color = TextPrimary, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+    }
 }

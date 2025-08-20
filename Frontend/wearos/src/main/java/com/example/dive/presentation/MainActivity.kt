@@ -17,6 +17,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.*
@@ -28,6 +29,8 @@ import com.example.dive.presentation.ui.FishingPointsScreen
 import com.example.dive.presentation.ui.SettingsScreen
 import com.example.dive.presentation.ui.TideScreen
 import com.example.dive.presentation.ui.WeatherScreen
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
 
@@ -92,8 +95,15 @@ fun MainApp(
 ) {
     val pagerState = rememberPagerState(pageCount = { 6 })
 
+    // TimeSource for Korean AM/PM
+    val timeSource = object : TimeSource {
+        override val currentTime: String
+            @Composable
+            get() = remember { SimpleDateFormat("a hh:mm", Locale.KOREA).format(System.currentTimeMillis()) }
+    }
+
     Scaffold(
-        timeText = { TimeText() },
+        timeText = { TimeText(timeSource = timeSource) },
         pageIndicator = {
             HorizontalPageIndicator(
                 pageIndicatorState = object : PageIndicatorState {
