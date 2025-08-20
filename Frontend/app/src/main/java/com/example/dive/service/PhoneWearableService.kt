@@ -1,4 +1,3 @@
-
 package com.example.dive.service
 
 import android.annotation.SuppressLint
@@ -26,6 +25,7 @@ import com.google.gson.Gson
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import android.location.Location
 
 class PhoneWearableService : WearableListenerService() {
 
@@ -37,24 +37,51 @@ class PhoneWearableService : WearableListenerService() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
     }
 
+    @SuppressLint("MissingPermission") // Permissions are handled in AndroidManifest.xml
     override fun onMessageReceived(messageEvent: MessageEvent) {
         Log.d("PhoneWearableService", "Received message: ${messageEvent.path}")
 
-        // ToDo: 실제 폰의 위치를 가져오는 로직으로 교체해야 합니다.
-        val lat = 35.1
-        val lon = 129.0
         val nodeId = messageEvent.sourceNodeId
 
-        when (messageEvent.path) {
-            "/request/tide" -> fetchTideData(lat, lon, nodeId)
-            "/request/weather" -> fetchWeatherData(lat, lon, nodeId)
-            "/request/locations" -> fetchFishingPoints(lat, lon, nodeId)
-            "/request/current_location" -> fetchCurrentLocation(nodeId)
-            "/emergency/sos" -> {
-                val reason = String(messageEvent.data)
-                handleSosTrigger(reason)
+        fusedLocationClient.lastLocation
+            .addOnSuccessListener { location ->
+                if (location != null) {
+                    val lat = location.latitude
+                    val lon = location.longitude
+
+                    when (messageEvent.path) {
+                        "/request/tide" -> fetchTideData(lat, lon, nodeId)
+                        "/request/weather" -> fetchWeatherData(lat, lon, nodeId)
+                        "/request/locations" -> fetchFishingPoints(lat, lon, nodeId)
+                        "/request/current_location" -> fetchCurrentLocation(nodeId)
+                        "/emergency/sos" -> {
+                            val reason = String(messageEvent.data)
+                            handleSosTrigger(reason)
+                        }
+                    }
+                } else {
+                    Log.e("PhoneWearableService", "Location not available for message: ${messageEvent.path}")
+                    // Handle case where location is not available
+                    when (messageEvent.path) {
+                        "/request/tide" -> sendMessageToWatch("/response/tide/error", "Location not available".toByteArray(), nodeId)
+                        "/request/weather" -> sendMessageToWatch("/response/weather/error", "Location not available".toByteArray(), nodeId)
+                        "/request/locations" -> sendMessageToWatch("/response/locations/error", "Location not available".toByteArray(), nodeId)
+                        "/request/current_location" -> sendMessageToWatch("/response/current_location/error", "Location not available".toByteArray(), nodeId)
+                        "/emergency/sos" -> handleSosTrigger("Location not available for SOS")
+                    }
+                }
             }
-        }
+            .addOnFailureListener { e ->
+                Log.e("PhoneWearableService", "Failed to get location for message: ${messageEvent.path}, Error: ${e.message}")
+                // Handle case where location fetching failed
+                when (messageEvent.path) {
+                    "/request/tide" -> sendMessageToWatch("/response/tide/error", "Failed to get location".toByteArray(), nodeId)
+                    "/request/weather" -> sendMessageToWatch("/response/weather/error", "Failed to get location".toByteArray(), nodeId)
+                    "/request/locations" -> sendMessageToWatch("/response/locations/error", "Failed to get location".toByteArray(), nodeId)
+                    "/request/current_location" -> sendMessageToWatch("/response/current_location/error", "Failed to get location".toByteArray(), nodeId)
+                    "/emergency/sos" -> handleSosTrigger("Failed to get location for SOS")
+                }
+            }
     }
 
     private fun fetchTideData(lat: Double, lon: Double, nodeId: String) {
@@ -157,11 +184,11 @@ class PhoneWearableService : WearableListenerService() {
                 "위치 정보 없음"
             }
 
+            val smsManager = SmsManager.getDefault()
             val smsMessage = "긴급 SOS!\n사유: $reason\n위치: $locationLink"
 
             // Send SMS
             try {
-                val smsManager = SmsManager.getDefault()
                 smsManager.sendTextMessage(emergencyNumber, null, smsMessage, null, null)
                 Log.d("PhoneWearableService", "SOS SMS sent to $emergencyNumber")
             } catch (e: Exception) {
