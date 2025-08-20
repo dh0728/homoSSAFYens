@@ -1,0 +1,124 @@
+@file:OptIn(ExperimentalFoundationApi::class)
+
+package com.example.dive.presentation
+
+import android.os.Bundle
+import android.view.KeyEvent
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.viewModels
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.wear.compose.material.*
+import com.example.dive.emergency.EmergencyManager
+import com.example.dive.presentation.theme.DiveTheme
+import com.example.dive.presentation.ui.DetailedWeatherScreen
+import com.example.dive.presentation.ui.EmergencyScreen
+import com.example.dive.presentation.ui.FishingPointsScreen
+import com.example.dive.presentation.ui.SettingsScreen
+import com.example.dive.presentation.ui.TideScreen
+import com.example.dive.presentation.ui.WeatherScreen
+
+class MainActivity : ComponentActivity() {
+
+    private val viewModel: MainViewModel by viewModels()
+
+    // For Crown Press SOS
+    private var crownPressCount = 0
+    private var lastCrownPressTime = 0L
+    private val CROWN_PRESS_TIMEOUT = 2000L // 2 seconds
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        setContent {
+            DiveTheme {
+                val tideUiState by viewModel.tideUiState.collectAsState()
+                val weatherUiState by viewModel.weatherUiState.collectAsState()
+                val fishingPointsUiState by viewModel.fishingPointsUiState.collectAsState()
+                val detailedWeatherUiState by viewModel.detailedWeatherUiState.collectAsState()
+                val emergencyUiState by viewModel.emergencyUiState.collectAsState()
+
+                MainApp(
+                    tideUiState = tideUiState,
+                    weatherUiState = weatherUiState,
+                    fishingPointsUiState = fishingPointsUiState,
+                    detailedWeatherUiState = detailedWeatherUiState,
+                    emergencyUiState = emergencyUiState
+                )
+            }
+        }
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_STEM_PRIMARY) {
+            val currentTime = System.currentTimeMillis()
+
+            if (currentTime - lastCrownPressTime > CROWN_PRESS_TIMEOUT) {
+                crownPressCount = 1
+            } else {
+                crownPressCount++
+            }
+            lastCrownPressTime = currentTime
+
+            if (crownPressCount >= 3) {
+                EmergencyManager.triggerEmergencySOS(this, "크라운 3회 누름")
+                crownPressCount = 0
+            }
+            // Return true to indicate we've handled the event
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+}
+
+@Composable
+fun MainApp(
+    tideUiState: TideUiState,
+    weatherUiState: WeatherUiState,
+    fishingPointsUiState: FishingPointsUiState,
+    detailedWeatherUiState: DetailedWeatherUiState,
+    emergencyUiState: EmergencyUiState
+) {
+    val pagerState = rememberPagerState(pageCount = { 6 })
+
+    Scaffold(
+        timeText = { TimeText() },
+        pageIndicator = {
+            HorizontalPageIndicator(
+                pageIndicatorState = object : PageIndicatorState {
+                    override val pageOffset: Float
+                        get() = pagerState.currentPageOffsetFraction
+                    override val selectedPage: Int
+                        get() = pagerState.currentPage
+                    override val pageCount: Int
+                        get() = pagerState.pageCount
+                },
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
+    ) {
+        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colors.background)) {
+            HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+                when (page) {
+                    0 -> TideScreen(uiState = tideUiState)
+                    1 -> WeatherScreen(uiState = weatherUiState)
+                    2 -> FishingPointsScreen(uiState = fishingPointsUiState)
+                    3 -> DetailedWeatherScreen(uiState = detailedWeatherUiState)
+                    4 -> EmergencyScreen(uiState = emergencyUiState)
+                    5 -> SettingsScreen()
+                }
+            }
+        }
+    }
+}

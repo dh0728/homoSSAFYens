@@ -1,6 +1,7 @@
 package com.example.dive
 
 import android.Manifest
+import android.os.Build
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
@@ -24,6 +25,11 @@ import retrofit2.Response
 import java.text.SimpleDateFormat
 import java.util.*
 import androidx.fragment.app.commit
+import androidx.lifecycle.ViewModelProvider
+import com.google.android.material.snackbar.Snackbar
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import com.example.dive.presentation.MainViewModel
 
 
 class MainActivity : AppCompatActivity() {
@@ -35,12 +41,16 @@ class MainActivity : AppCompatActivity() {
     private var lastLat: Double? = null
     private var lastLon: Double? = null
 
+    private lateinit var viewModel: MainViewModel
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d("MainActivity", "앱 실행됨!")
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
+
+        viewModel = ViewModelProvider(this).get(MainViewModel::class.java)
 
         tvNearestSub = findViewById(R.id.tvNearestSub)
         tvDate = findViewById(R.id.tvDate)
@@ -72,10 +82,36 @@ class MainActivity : AppCompatActivity() {
         // 위치 기반 API 호출
         getCurrentLocationAndCallApi()
 
+        // 알림 권한 요청 (Android 13 이상)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ActivityCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                    102
+                )
+            }
+        }
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
+        }
+
+        // Observe phone connection status
+        lifecycleScope.launch {
+            viewModel.phoneConnected.collect {
+                if (!it) {
+                    Snackbar.make(findViewById(R.id.main), "폰과 연결이 끊어졌습니다.", Snackbar.LENGTH_INDEFINITE).show()
+                } else {
+                    Snackbar.make(findViewById(R.id.main), "폰과 연결되었습니다.", Snackbar.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
@@ -93,7 +129,9 @@ class MainActivity : AppCompatActivity() {
                 this,
                 arrayOf(
                     Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission.SEND_SMS,
+                    Manifest.permission.CALL_PHONE
                 ),
                 100
             )
@@ -159,18 +197,35 @@ class MainActivity : AppCompatActivity() {
     }
 
     // 권한 허용 후 다시 시도
-    override fun onRequestPermissionsResult(
+        override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 100 && grantResults.isNotEmpty() &&
-            grantResults[0] == PackageManager.PERMISSION_GRANTED
-        ) {
-            getCurrentLocationAndCallApi()
+        if (requestCode == 100) {
+            var allPermissionsGranted = true
+            for (result in grantResults) {
+                if (result != PackageManager.PERMISSION_GRANTED) {
+                    allPermissionsGranted = false
+                    break
+                }
+            }
+            if (allPermissionsGranted) {
+                getCurrentLocationAndCallApi()
+            } else {
+                // Handle case where not all permissions are granted
+                Log.e("MainActivity", "Not all permissions granted.")
+            }
+        } else if (requestCode == 102) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d("MainActivity", "Notification permission granted.")
+            } else {
+                Log.e("MainActivity", "Notification permission denied.")
+            }
         }
     }
 
 
 }
+
