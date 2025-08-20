@@ -90,5 +90,15 @@ fun SettingsScreen(viewModel: MainViewModel = viewModel()) {
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
         }
+
+        item {
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = { viewModel.requestDataRefresh() },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("데이터 새로고침")
+            }
+        }
     }
 }

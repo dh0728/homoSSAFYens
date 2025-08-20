@@ -204,7 +204,7 @@ class WatchDataRepository(private val context: Context) {
         awaitClose { LocalBroadcastManager.getInstance(context).unregisterReceiver(receiver) }
     }
 
-    private suspend fun requestDataFromServer(path: String) {
+    internal suspend fun requestDataFromServer(path: String) {
         try {
             val nodes = capabilityClient.getCapability(CAPABILITY_PHONE_APP, CapabilityClient.FILTER_REACHABLE).await().nodes
             nodes.firstOrNull()?.id?.let { nodeId -> // Changed 'it' to 'nodeId' for clarity
