@@ -5,16 +5,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.*
 import com.example.dive.data.model.FishingData
+import com.example.dive.data.model.FishingPoint
 import com.example.dive.presentation.FishingPointsUiState
 import com.example.dive.presentation.theme.TextPrimary
 import com.example.dive.presentation.theme.TextSecondary
-import com.example.dive.presentation.theme.TextTertiary
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @Composable
 fun FishingPointsScreen(uiState: FishingPointsUiState) {
@@ -35,66 +33,104 @@ fun FishingPointsScreen(uiState: FishingPointsUiState) {
                 )
             }
             is FishingPointsUiState.Success -> {
-                LocationInfoCard(fishingData = uiState.fishingData)
+                FishingPointsList(fishingData = uiState.fishingData)
             }
         }
     }
 }
 
 @Composable
-fun LocationInfoCard(fishingData: FishingData) {
-    val nearestPoint = fishingData.points.firstOrNull()
-    val lastUpdate = SimpleDateFormat("m분 전", Locale.getDefault()).format(Date())
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+fun FishingPointsList(fishingData: FishingData) {
+    ScalingLazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            top = 24.dp,
+            start = 8.dp,
+            end = 8.dp,
+            bottom = 40.dp
+        ),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // 위치 상태
-        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        // Header
+        item {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = fishingData.info.intro.substringBefore(" ").trim(), // e.g., "수영만"
+                    style = MaterialTheme.typography.title3,
+                    color = TextPrimary
+                )
+                Text(
+                    text = "총 ${fishingData.points.size}개 포인트",
+                    style = MaterialTheme.typography.body2,
+                    color = TextSecondary
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+        }
+
+        // Point Cards
+        items(fishingData.points) { point ->
+            FishingPointCard(point = point)
+        }
+    }
+}
+
+@Composable
+fun FishingPointCard(point: FishingPoint) {
+    Card(
+        onClick = { /* TODO: Navigate to detail screen */ },
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
+        ) {
+            // Point Name and Distance
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = point.pointName,
+                    style = MaterialTheme.typography.title3,
+                    color = TextPrimary,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "${point.pointDtKm}km",
+                    style = MaterialTheme.typography.body1,
+                    color = TextSecondary
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Details
             Text(
-                text = "📱 폰 위치 기반",
+                text = "${point.depth.minM}~${point.depth.maxM}m · ${point.material} · ${point.tideTime}",
                 style = MaterialTheme.typography.body2,
-                color = TextSecondary
+                color = TextSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Target Fish
+            val targetFish = point.targetByFish.keys.take(3).joinToString(", ")
             Text(
-                text = "${nearestPoint?.addr ?: "위치 알 수 없음"} - ${nearestPoint?.pointName ?: ""}",
+                text = "🐟 $targetFish",
                 style = MaterialTheme.typography.body1,
                 color = TextPrimary,
-                textAlign = TextAlign.Center
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // 좌표/업데이트
-        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "좌표: ${nearestPoint?.lat ?: "-"}, ${nearestPoint?.lon ?: "-"}",
-                style = MaterialTheme.typography.caption1,
-                color = TextTertiary
-            )
-            Text(
-                text = "마지막 업데이트: $lastUpdate",
-                style = MaterialTheme.typography.caption1,
-                color = TextTertiary
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 액션 버튼
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Button(onClick = { /* TODO: 새로고침 */ }) { Text("새로고침") }
-            Button(onClick = { /* TODO: 저장 */ }) { Text("저장") }
-            Button(onClick = { /* TODO: 상세 */ }) { Text("상세") }
         }
     }
 }
