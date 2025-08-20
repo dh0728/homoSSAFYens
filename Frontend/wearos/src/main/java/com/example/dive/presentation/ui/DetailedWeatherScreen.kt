@@ -2,6 +2,8 @@ package com.example.dive.presentation.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -50,10 +52,10 @@ fun DetailedWeatherScreen(uiState: DetailedWeatherUiState) {
 
 @Composable
 fun DetailedWeatherInfoCard(weatherData: Weather7dData) {
-    ScalingLazyColumn(
+    LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
-            top = 24.dp,
+            top = 20.dp,
             start = 8.dp,
             end = 8.dp,
             bottom = 40.dp
@@ -63,7 +65,7 @@ fun DetailedWeatherInfoCard(weatherData: Weather7dData) {
         item {
             Text(
                 text = "주간 날씨",
-                style = MaterialTheme.typography.title2,
+                style = MaterialTheme.typography.body2,
                 color = TextPrimary
             )
             Spacer(modifier = Modifier.height(12.dp))
@@ -83,14 +85,12 @@ fun DayWeatherCard(day: com.example.dive.data.model.WeatherDay) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 12.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(BackgroundSecondary)
-            .padding(12.dp)
     ) {
         // Date Header
         val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.KOREA)
         val outputFormat = SimpleDateFormat("MM월 dd일 (E)", Locale.KOREA)
         val date = inputFormat.parse(day.date)
+
         Text(
             text = outputFormat.format(date),
             style = MaterialTheme.typography.title3,
@@ -106,20 +106,29 @@ fun DayWeatherCard(day: com.example.dive.data.model.WeatherDay) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.Center
         ) {
-            Text(text = "시간", style = MaterialTheme.typography.caption1, color = TextTertiary, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-            Text(text = "날씨", style = MaterialTheme.typography.caption1, color = TextTertiary, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-            Text(text = "기온", style = MaterialTheme.typography.caption1, color = TextTertiary, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-            Text(text = "강수", style = MaterialTheme.typography.caption1, color = TextTertiary, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+            Text("시간", style = MaterialTheme.typography.body2, color = TextTertiary, modifier = Modifier.width(50.dp), textAlign = TextAlign.Center)
+            Text("날씨", style = MaterialTheme.typography.body2, color = TextTertiary, modifier = Modifier.width(30.dp), textAlign = TextAlign.Center)
+            Text("기온", style = MaterialTheme.typography.body2, color = TextTertiary, modifier = Modifier.width(30.dp), textAlign = TextAlign.Center)
+            Text("강수", style = MaterialTheme.typography.body2, color = TextTertiary, modifier = Modifier.width(40.dp), textAlign = TextAlign.Center)
         }
 
+        // Header 밑 라인
+        ThinDivider()
+
         // Table Rows
-        day.hours.forEach { hour ->
+        day.hours.forEachIndexed { index, hour ->
             HourlyWeatherRow(hour = hour)
+
+            // Row 밑에만 Divider
+            if (index < day.hours.size - 1) {
+                ThinDivider(color = TextSecondary.copy(alpha = 0.15f))
+            }
         }
     }
 }
+
 
 @Composable
 fun HourlyWeatherRow(hour: com.example.dive.data.model.WeatherHour) {
@@ -128,15 +137,33 @@ fun HourlyWeatherRow(hour: com.example.dive.data.model.WeatherHour) {
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.Center
     ) {
         val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.KOREA)
         val date = inputFormat.parse(hour.time)
-        val hourString = SimpleDateFormat("HH시", Locale.KOREA).format(date)
+        val hourString = SimpleDateFormat("a h시", Locale.KOREA).format(date)
 
-        Text(text = hourString, style = MaterialTheme.typography.body2, color = TextPrimary, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-        Text(text = getWeatherEmojiFromSky(hour.sky), style = MaterialTheme.typography.body2, color = TextPrimary, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-        Text(text = "${hour.temp}°", style = MaterialTheme.typography.body2, color = TextPrimary, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-        Text(text = "${hour.rainAmt}mm", style = MaterialTheme.typography.body2, color = TextPrimary, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+        Text(text = hourString, style = MaterialTheme.typography.body2, color = TextPrimary, modifier = Modifier.width(50.dp), textAlign = TextAlign.Center)
+        Text(text = getWeatherEmojiFromSky(hour.sky), style = MaterialTheme.typography.body2, color = TextPrimary,modifier = Modifier.width(30.dp), textAlign = TextAlign.Center)
+        Text(text = "${hour.temp.toInt()}°", style = MaterialTheme.typography.body2, color = TextPrimary, modifier = Modifier.width(30.dp), textAlign = TextAlign.Center)
+        Text(text = "${hour.rainAmt.toInt()}mm", style = MaterialTheme.typography.body2, color = TextPrimary, modifier = Modifier.width(40.dp), textAlign = TextAlign.Center)
     }
 }
+
+@Composable
+fun ThinDivider(
+    color: androidx.compose.ui.graphics.Color = TextSecondary.copy(alpha = 0.3f)
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .width(146.dp) // 열 너비 합 맞춤 (50 + 28 + 28 + 40)
+                .height(0.5.dp)
+                .background(color)
+        )
+    }
+}
+

@@ -128,7 +128,6 @@ fun WeatherInfoCard(weatherData: Weather6hData) {
                 )
             }
 
-// ✅ 상세 데이터 (Row + Column으로 정리)
             item {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -149,7 +148,11 @@ fun WeatherInfoCard(weatherData: Weather6hData) {
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("파고", style = MaterialTheme.typography.caption1, color = TextSecondary)
-                            Text("${currentWeather.waveHeightM ?: "-"}m", style = MaterialTheme.typography.body2, color = TextPrimary)
+                            Text(
+                                text = currentWeather.waveHeightM.toDisplayString("m"),
+                                style = MaterialTheme.typography.body2,
+                                color = TextPrimary
+                            )
                         }
                     }
 
@@ -221,6 +224,11 @@ fun WeatherInfoCard(weatherData: Weather6hData) {
             }
         }
     }
+}
+
+fun String?.toDisplayString(suffix: String = ""): String {
+    val value = this?.toDoubleOrNull()
+    return if (value == null || value.isNaN()) "- $suffix" else "$value$suffix"
 }
 
 fun getWeatherEmojiFromSky(sky: String): String {
