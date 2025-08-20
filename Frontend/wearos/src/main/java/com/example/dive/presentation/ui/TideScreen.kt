@@ -206,7 +206,7 @@ fun TideEventCell(event: TideEvent, modifier: Modifier = Modifier) {
 
         // 시간
         Text(
-            text = event.time,
+            text = event.time.substring(0, 5),
             style = MaterialTheme.typography.title3,
             color = TextPrimary
         )

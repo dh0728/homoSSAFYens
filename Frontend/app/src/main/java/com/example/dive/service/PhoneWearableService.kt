@@ -16,6 +16,7 @@ import com.example.dive.data.model.LocationData
 import com.example.dive.data.model.LocationResponse
 import com.example.dive.data.model.TideResponse
 import com.example.dive.data.model.Weather6hResponse
+import com.example.dive.data.model.Weather7dResponse
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.wearable.MessageEvent
@@ -52,6 +53,7 @@ class PhoneWearableService : WearableListenerService() {
                     when (messageEvent.path) {
                         "/request/tide" -> fetchTideData(lat, lon, nodeId)
                         "/request/weather" -> fetchWeatherData(lat, lon, nodeId)
+                        "/request/7dweather" -> fetchWeather7dData(lat, lon, nodeId)
                         "/request/locations" -> fetchFishingPoints(lat, lon, nodeId)
                         "/request/current_location" -> fetchCurrentLocation(nodeId)
                         "/emergency/sos" -> {
@@ -65,6 +67,7 @@ class PhoneWearableService : WearableListenerService() {
                     when (messageEvent.path) {
                         "/request/tide" -> sendMessageToWatch("/response/tide/error", "Location not available".toByteArray(), nodeId)
                         "/request/weather" -> sendMessageToWatch("/response/weather/error", "Location not available".toByteArray(), nodeId)
+                        "/request/7dweather" -> sendMessageToWatch("/response/7dweather/error", "Location not available".toByteArray(), nodeId)
                         "/request/locations" -> sendMessageToWatch("/response/locations/error", "Location not available".toByteArray(), nodeId)
                         "/request/current_location" -> sendMessageToWatch("/response/current_location/error", "Location not available".toByteArray(), nodeId)
                         "/emergency/sos" -> handleSosTrigger("Location not available for SOS")
@@ -77,6 +80,7 @@ class PhoneWearableService : WearableListenerService() {
                 when (messageEvent.path) {
                     "/request/tide" -> sendMessageToWatch("/response/tide/error", "Failed to get location".toByteArray(), nodeId)
                     "/request/weather" -> sendMessageToWatch("/response/weather/error", "Failed to get location".toByteArray(), nodeId)
+                    "/request/7dweather" -> sendMessageToWatch("/response/7dweather/error", "Failed to get location".toByteArray(), nodeId)
                     "/request/locations" -> sendMessageToWatch("/response/locations/error", "Failed to get location".toByteArray(), nodeId)
                     "/request/current_location" -> sendMessageToWatch("/response/current_location/error", "Failed to get location".toByteArray(), nodeId)
                     "/emergency/sos" -> handleSosTrigger("Failed to get location for SOS")
@@ -120,6 +124,26 @@ class PhoneWearableService : WearableListenerService() {
 
                 override fun onFailure(call: Call<Weather6hResponse>, t: Throwable) {
                     sendMessageToWatch("/response/weather/error", t.message?.toByteArray() ?: byteArrayOf(), nodeId)
+                }
+            })
+    }
+
+    private fun fetchWeather7dData(lat: Double, lon: Double, nodeId: String) {
+        RetrofitClient.instance.getWeather7d(lat, lon)
+            .enqueue(object : Callback<Weather7dResponse> {
+                override fun onResponse(call: Call<Weather7dResponse>, response: Response<Weather7dResponse>) {
+                    if (response.isSuccessful) {
+                        val dataResponse = response.body()
+                        val payload = gson.toJson(dataResponse).toByteArray()
+                        sendMessageToWatch("/response/7dweather", payload, nodeId)
+                    } else {
+                        val errorMsg = "API Error: ${response.code()}"
+                        sendMessageToWatch("/response/7dweather/error", errorMsg.toByteArray(), nodeId)
+                    }
+                }
+
+                override fun onFailure(call: Call<Weather7dResponse>, t: Throwable) {
+                    sendMessageToWatch("/response/7dweather/error", t.message?.toByteArray() ?: byteArrayOf(), nodeId)
                 }
             })
     }

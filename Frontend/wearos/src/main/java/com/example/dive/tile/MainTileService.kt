@@ -1,23 +1,15 @@
 package com.example.dive.tile
 
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.concurrent.futures.CallbackToFutureAdapter
 import androidx.wear.tiles.ActionBuilders
 import androidx.wear.tiles.ColorBuilders.argb
 import androidx.wear.tiles.DimensionBuilders.dp
 import androidx.wear.tiles.DimensionBuilders.sp
-import androidx.wear.tiles.LayoutElementBuilders.Box
-import androidx.wear.tiles.LayoutElementBuilders.Column
-import androidx.wear.tiles.LayoutElementBuilders.FontStyle
-import androidx.wear.tiles.LayoutElementBuilders.Layout
-import androidx.wear.tiles.LayoutElementBuilders.LayoutElement
-import androidx.wear.tiles.LayoutElementBuilders.Row
-import androidx.wear.tiles.LayoutElementBuilders.Spacer
-import androidx.wear.tiles.LayoutElementBuilders.Text
-import androidx.wear.tiles.ModifiersBuilders.Background
-import androidx.wear.tiles.ModifiersBuilders.Clickable
-import androidx.wear.tiles.ModifiersBuilders.Modifiers
+import androidx.wear.tiles.LayoutElementBuilders.*
+import androidx.wear.tiles.ModifiersBuilders.*
 import androidx.wear.tiles.RequestBuilders
 import androidx.wear.tiles.ResourceBuilders
 import androidx.wear.tiles.TileBuilders
@@ -26,6 +18,7 @@ import androidx.wear.tiles.TimelineBuilders
 import com.example.dive.data.WatchDataRepository
 import com.example.dive.data.model.TideData
 import com.example.dive.data.model.TideEvent
+import com.example.dive.health.HeartRateMonitor
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.gson.Gson
@@ -35,6 +28,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
 
 private const val RESOURCES_VERSION = "1"
 private const val TAG = "MainTileService"
@@ -71,10 +65,13 @@ class MainTileService : TileService() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var repository: WatchDataRepository
+    private lateinit var heartRateMonitor: HeartRateMonitor
 
     override fun onCreate() {
         super.onCreate()
         repository = WatchDataRepository(this)
+        // Pass a dummy flow for marineActivityModeFlow as it's not relevant for TileService's HR monitoring
+        heartRateMonitor = HeartRateMonitor(this, MutableStateFlow(com.example.dive.presentation.ui.MarineActivityMode.OFF))
     }
 
     override fun onDestroy() {
@@ -92,24 +89,28 @@ class MainTileService : TileService() {
                 weekday = "",
                 locationName = "로딩중",
                 mul = "",
-                lunar = "",          // 추가: 프로젝트 모델에 맞춘 필드들
+                lunar = "",
                 sunrise = "",
                 sunset = "",
                 moonrise = "",
                 moonset = "",
-                events = fallbackEvents()  // 아래에서 0 값으로 보정됨
+                events = fallbackEvents()
             )
+
+            // Get latest heart rate value
+            val currentHeartRate = heartRateMonitor.latestHeartRate.value
 
             val initialContent = wrapClickable(
                 layout(
                     locationName = initial.locationName,
                     mul         = initial.mul,
-                    events      = initial.events
+                    events      = initial.events,
+                    currentHeartRate = currentHeartRate
                 )
             )
             completer.set(buildTile(initialContent))
 
-            // 2) 백그라운드에서 최신 데이터로 갱신 → 캐시 저장 → 타일 업데이트 요청
+            // 백그라운드에서 최신 데이터로 갱신 → 캐시 저장 → 타일 업데이트 요청
             val job = serviceScope.launch {
                 try {
                     val latest = repository.getTideData().firstOrNull()?.data
@@ -189,11 +190,12 @@ class MainTileService : TileService() {
             .build()
     }
 
-    /** 메인 레이아웃(가독성 개선 버전) */
+    /** 메인 레이아웃 */
     private fun layout(
         locationName: String,
         mul: String,
-        events: List<TideEvent>
+        events: List<TideEvent>,
+        currentHeartRate: Int
     ): LayoutElement {
         val highs = events.filter { it.trend == "만조" }.take(2)
         val lows  = events.filter { it.trend == "간조" }.take(2)
@@ -248,6 +250,21 @@ class MainTileService : TileService() {
             )
             .build()
 
+        // Heart Rate Section - 앱 실행으로 변경
+        val heartRateSection = Row.Builder()
+            .addContent(
+                Text.Builder()
+                    .setText("HR: ${if (currentHeartRate > 0) currentHeartRate else "---"} bpm")
+                    .setFontStyle(
+                        FontStyle.Builder()
+                            .setSize(sp(14f))
+                            .setColor(argb(TileColors.TextPrimary))
+                            .build()
+                    )
+                    .build()
+            )
+            .build()
+
         return Column.Builder()
             .addContent(Spacer.Builder().setHeight(dp(12f)).build())
             .addContent(header)
@@ -274,6 +291,7 @@ class MainTileService : TileService() {
                     .build()
             )
             .addContent(Spacer.Builder().setHeight(dp(12f)).build())
+            .addContent(heartRateSection)
             .build()
     }
 
