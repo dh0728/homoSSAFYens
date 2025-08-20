@@ -31,6 +31,10 @@ import com.example.dive.presentation.ui.TideScreen
 import com.example.dive.presentation.ui.WeatherScreen
 import java.text.SimpleDateFormat
 import java.util.Locale
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.app.ActivityCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 class MainActivity : ComponentActivity() {
 
@@ -43,6 +47,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestPermissions()
 
         setContent {
             DiveTheme {
@@ -61,6 +66,40 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    private fun requestPermissions() {
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.BODY_SENSORS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.BODY_SENSORS),
+                REQUEST_BODY_SENSORS_PERMISSION
+            )
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_BODY_SENSORS_PERMISSION) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission granted
+            } else {
+                // Permission denied
+                // You might want to show a message to the user or disable functionality
+            }
+        }
+    }
+
+    companion object {
+        private const val REQUEST_BODY_SENSORS_PERMISSION = 1
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
@@ -125,7 +164,7 @@ fun MainApp(
                     1 -> WeatherScreen(uiState = weatherUiState)
                     2 -> DetailedWeatherScreen(uiState = detailedWeatherUiState)
                     3 -> FishingPointsScreen(uiState = fishingPointsUiState)
-                    4 -> EmergencyScreen(uiState = emergencyUiState)
+                    4 -> EmergencyScreen(viewModel = viewModel())
                     5 -> SettingsScreen()
                 }
             }

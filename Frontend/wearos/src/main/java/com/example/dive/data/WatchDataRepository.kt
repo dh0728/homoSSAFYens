@@ -26,11 +26,15 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
+import android.content.SharedPreferences
+import androidx.preference.PreferenceManager
+
 class WatchDataRepository(private val context: Context) {
 
     private val messageClient by lazy { Wearable.getMessageClient(context) }
     private val capabilityClient by lazy { Wearable.getCapabilityClient(context) }
     private val gson = Gson()
+    private val sharedPreferences: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
 
     private val _isConnected = MutableStateFlow(false)
     val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
@@ -69,6 +73,19 @@ class WatchDataRepository(private val context: Context) {
     }
 
     fun getTideData(): Flow<TideResponse> = callbackFlow {
+        // Try to load from cache first
+        val cachedJson = sharedPreferences.getString(KEY_CACHED_TIDE_DATA, null)
+        if (cachedJson != null) {
+            try {
+                val cachedResponse = gson.fromJson(cachedJson, TideResponse::class.java)
+                trySend(cachedResponse) // Emit cached data immediately
+            } catch (e: Exception) {
+                Log.e("WatchDataRepository", "Error parsing cached tide data", e)
+                // If parsing fails, clear cache to avoid infinite loop
+                sharedPreferences.edit().remove(KEY_CACHED_TIDE_DATA).apply()
+            }
+        }
+
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
                 if (intent.action == WatchMessageListenerService.ACTION_MESSAGE_RECEIVED) {
@@ -76,11 +93,20 @@ class WatchDataRepository(private val context: Context) {
                     if (path == "/response/tide") {
                         val data = intent.getByteArrayExtra(WatchMessageListenerService.EXTRA_DATA)
                         if (data != null) {
-                            val response = gson.fromJson(String(data), TideResponse::class.java)
-                            this@callbackFlow.trySend(response) // Explicitly use this@callbackFlow
+                            val responseJson = String(data)
+                            try {
+                                val response = gson.fromJson(responseJson, TideResponse::class.java)
+                                trySend(response)
+                                // Save to cache on successful network fetch
+                                sharedPreferences.edit().putString(KEY_CACHED_TIDE_DATA, responseJson).apply()
+                            } catch (e: Exception) {
+                                Log.e("WatchDataRepository", "Error parsing tide data from network", e)
+                                // Do not close flow on parsing error, keep cached data if any
+                            }
                         }
                     } else if (path == "/response/tide/error") {
-                        this@callbackFlow.close() // Explicitly use this@callbackFlow
+                        // Do not close flow on network error, keep cached data if any
+                        Log.e("WatchDataRepository", "Network error for tide data")
                     }
                 }
             }
@@ -193,5 +219,6 @@ class WatchDataRepository(private val context: Context) {
 
     companion object {
         private const val CAPABILITY_PHONE_APP = "homossafyens_phone_app"
+        private const val KEY_CACHED_TIDE_DATA = "cached_tide_data"
     }
 }

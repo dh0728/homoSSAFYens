@@ -17,7 +17,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class HeartRateMonitor(private val context: Context, private val marineActivityModeFlow: StateFlow<MarineActivityMode>) : SensorEventListener {
+import com.example.dive.data.HealthRepository
+
+class HeartRateMonitor(private val context: Context, private val marineActivityModeFlow: StateFlow<MarineActivityMode>, private val healthRepository: HealthRepository) : SensorEventListener {
 
     private val sensorManager: SensorManager by lazy {
         context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -31,6 +33,11 @@ class HeartRateMonitor(private val context: Context, private val marineActivityM
 
     private val _latestHeartRate = MutableStateFlow(0)
     val latestHeartRate = _latestHeartRate.asStateFlow()
+
+    private var heartRateSum = 0
+    private var heartRateCount = 0
+    private val _averageHeartRate = MutableStateFlow(0)
+    val averageHeartRate = _averageHeartRate.asStateFlow()
 
     // SleepAndActivityDetector is now stateless
     private val detector = SleepAndActivityDetector
@@ -46,7 +53,11 @@ class HeartRateMonitor(private val context: Context, private val marineActivityM
             return
         }
         if (!isMonitoring) {
-            // TODO: Add runtime permission check for BODY_SENSORS
+            // Reset for new measurement
+            heartRateSum = 0
+            heartRateCount = 0
+            _averageHeartRate.value = 0 // Reset average as well
+
             sensorManager.registerListener(this, heartRateSensor, SensorManager.SENSOR_DELAY_NORMAL)
             isMonitoring = true
             Log.d("HeartRateMonitor", "Started monitoring heart rate")
@@ -57,6 +68,18 @@ class HeartRateMonitor(private val context: Context, private val marineActivityM
         if (isMonitoring) {
             sensorManager.unregisterListener(this)
             isMonitoring = false
+
+            // Calculate average heart rate
+            if (heartRateCount > 0) {
+                val avgHr = heartRateSum / heartRateCount
+                _averageHeartRate.value = avgHr
+                Log.d("HeartRateMonitor", "Average Heart Rate: ${_averageHeartRate.value}")
+                healthRepository.setLastAverageHr(avgHr)
+            } else {
+                _averageHeartRate.value = 0 // No valid data
+                Log.d("HeartRateMonitor", "No valid heart rate data for average calculation.")
+                healthRepository.setLastAverageHr(0)
+            }
             Log.d("HeartRateMonitor", "Stopped monitoring heart rate")
         }
     }
@@ -66,6 +89,12 @@ class HeartRateMonitor(private val context: Context, private val marineActivityM
             val heartRate = event.values[0].toInt()
             _latestHeartRate.value = heartRate
             Log.d("HeartRateMonitor", "Current Heart Rate: $heartRate")
+
+            // Accumulate heart rate for average calculation
+            if (heartRate > 0) { // Only accumulate valid heart rates
+                heartRateSum += heartRate
+                heartRateCount++
+            }
 
             // Dummy values for now, these should come from actual sensors/data
             val dummyLocationData = LocationData(0.0, 0.0, 0.0f, 0L, "Dummy Address")

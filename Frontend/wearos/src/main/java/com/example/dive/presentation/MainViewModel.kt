@@ -2,6 +2,7 @@ package com.example.dive.presentation
 
 import android.app.Application
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
@@ -9,6 +10,8 @@ import com.example.dive.data.WatchDataRepository
 import com.example.dive.data.model.*
 import com.example.dive.health.HeartRateMonitor
 import com.example.dive.presentation.ui.MarineActivityMode
+import com.example.dive.data.HealthRepository
+import com.example.dive.presentation.MeasurementState
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -47,14 +50,16 @@ sealed interface FishingPointsUiState {
 // Emergency UI 상태
 sealed interface EmergencyUiState {
     data class Success(
-        val heartRate: Int,
         val lastMeasured: String,
         val locationStatus: String,
-        val marineMode: MarineActivityMode
+        val marineMode: MarineActivityMode,
+        val averageHeartRate: Int? = null // New field for average heart rate
     ) : EmergencyUiState
     object Error : EmergencyUiState
     object Loading : EmergencyUiState
 }
+
+data class MeasurementState(val isMeasuring: Boolean, val lastAverageHr: Int?)
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -92,12 +97,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
     val isMonitoringEnabled: StateFlow<Boolean> = _isMonitoringEnabled.asStateFlow()
 
-    private val heartRateMonitor: HeartRateMonitor by lazy {
-        HeartRateMonitor(getApplication(), _selectedMarineActivityMode)
-    }
-
     val phoneConnected: StateFlow<Boolean> = watchDataRepository.isConnected
 
+    private val healthRepository = HealthRepository(application)
+
+    val measurementState: StateFlow<MeasurementState> = healthRepository.measurementState
+
+    private val heartRateMonitor = HeartRateMonitor(getApplication(), _selectedMarineActivityMode, healthRepository)
+    val liveHeartRate: StateFlow<Int> = heartRateMonitor.latestHeartRate
     init {
         viewModelScope.launch {
             watchDataRepository.getTideData()
@@ -126,7 +133,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         // Emergency
         viewModelScope.launch {
             combine(
-                heartRateMonitor.latestHeartRate,
                 watchDataRepository.getLocationData().catch {
                     emit(
                         LocationResponse(
@@ -135,17 +141,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         )
                     )
                 },
-                _selectedMarineActivityMode
-            ) { heartRate, locationResponse, marineMode ->
+                _selectedMarineActivityMode,
+                heartRateMonitor.averageHeartRate
+            ) { locationResponse, marineMode, averageHeartRate ->
                 val locationData = locationResponse.data
                 val lastMeasured =
-                    SimpleDateFormat("m분 전", Locale.getDefault()).format(Date())
+                    SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
                 val locationStatus = locationData.address ?: "위치 정보 없음"
-                EmergencyUiState.Success(heartRate, lastMeasured, locationStatus, marineMode)
+                EmergencyUiState.Success(
+                    lastMeasured,
+                    locationStatus,
+                    marineMode,
+                    averageHeartRate
+                )
             }.catch {
                 _emergencyUiState.value = EmergencyUiState.Error
             }.collect { combined ->
                 _emergencyUiState.value = combined
+                Log.d("MainViewModel", "EmergencyUiState updated: $combined")
             }
         }
     }
@@ -170,8 +183,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return sharedPreferences.getBoolean(KEY_MONITORING_ENABLED, false)
     }
 
+    fun requestDataRefresh() {
+        viewModelScope.launch {
+            watchDataRepository.requestDataFromServer("/request/refresh_all_data")
+            Log.d("MainViewModel", "Requested data refresh from phone.")
+        }
+    }
+
     companion object {
         internal const val KEY_MARINE_ACTIVITY_MODE = "marine_activity_mode"
         internal const val KEY_MONITORING_ENABLED = "monitoring_enabled"
+        internal const val KEY_LAST_AVERAGE_HR = "last_average_heart_rate"
     }
 }

@@ -18,6 +18,7 @@ import com.example.dive.presentation.MainViewModel
 import com.example.dive.presentation.ui.MarineActivityMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import com.example.dive.data.HealthRepository
 
 
 
@@ -26,6 +27,9 @@ class HealthMonitoringService : Service() {
     private lateinit var heartRateMonitor: HeartRateMonitor
     private lateinit var sharedPreferences: SharedPreferences
     private val _marineActivityModeFlow = MutableStateFlow(MarineActivityMode.OFF)
+
+    // Add HealthRepository
+    private lateinit var healthRepository: HealthRepository
 
     private val sharedPreferenceChangeListener = SharedPreferences.OnSharedPreferenceChangeListener {
             sharedPrefs, key ->
@@ -44,7 +48,10 @@ class HealthMonitoringService : Service() {
         val initialModeName = sharedPreferences.getString(MainViewModel.Companion.KEY_MARINE_ACTIVITY_MODE, MarineActivityMode.OFF.name) // Access Companion object explicitly
         _marineActivityModeFlow.value = MarineActivityMode.valueOf(initialModeName ?: MarineActivityMode.OFF.name)
 
-        heartRateMonitor = HeartRateMonitor(this, _marineActivityModeFlow)
+        // Initialize HealthRepository
+        healthRepository = HealthRepository(applicationContext)
+
+        heartRateMonitor = HeartRateMonitor(this, _marineActivityModeFlow, healthRepository)
     }
 
     private val handler = Handler(Looper.getMainLooper())
@@ -57,6 +64,7 @@ class HealthMonitoringService : Service() {
 
         when (intent?.action) {
             ACTION_START_HR_MONITORING -> {
+                healthRepository.setMeasuring(true) // Set measuring state
                 heartRateMonitor.startMonitoring()
                 // Cancel any previous stop monitoring runnable
                 stopMonitoringRunnable?.let { handler.removeCallbacks(it) }
@@ -70,6 +78,7 @@ class HealthMonitoringService : Service() {
             }
             else -> {
                 // Default continuous monitoring
+                healthRepository.setMeasuring(true) // Set measuring state
                 heartRateMonitor.startMonitoring()
                 Log.d("HealthMonitoringService", "Started continuous HR monitoring.")
             }
@@ -81,6 +90,7 @@ class HealthMonitoringService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         heartRateMonitor.stopMonitoring()
+        healthRepository.setMeasuring(false) // Set measuring state to false
         sharedPreferences.unregisterOnSharedPreferenceChangeListener(sharedPreferenceChangeListener)
     }
 

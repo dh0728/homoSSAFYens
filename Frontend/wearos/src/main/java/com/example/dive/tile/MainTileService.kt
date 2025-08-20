@@ -18,6 +18,7 @@ import androidx.wear.tiles.TimelineBuilders
 import com.example.dive.data.WatchDataRepository
 import com.example.dive.data.model.TideData
 import com.example.dive.data.model.TideEvent
+import com.example.dive.data.HealthRepository
 import com.example.dive.health.HeartRateMonitor
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
@@ -71,7 +72,7 @@ class MainTileService : TileService() {
         super.onCreate()
         repository = WatchDataRepository(this)
         // Pass a dummy flow for marineActivityModeFlow as it's not relevant for TileService's HR monitoring
-        heartRateMonitor = HeartRateMonitor(this, MutableStateFlow(com.example.dive.presentation.ui.MarineActivityMode.OFF))
+        heartRateMonitor = HeartRateMonitor(this, MutableStateFlow(com.example.dive.presentation.ui.MarineActivityMode.OFF), HealthRepository(this))
     }
 
     override fun onDestroy() {
