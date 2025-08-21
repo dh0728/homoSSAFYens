@@ -21,10 +21,15 @@ class Weather6hFragment : Fragment() {
     private lateinit var rvWeather: RecyclerView
     private lateinit var adapter: Weather6hAdapter
 
-    // 현재 날씨 뷰
+    // ✅ 현재 날씨 뷰
     private lateinit var tvCurrentTemp: TextView
     private lateinit var tvCurrentSky: TextView
-    private lateinit var tvCurrentEtc: TextView
+    private lateinit var tvCurrentHumidity: TextView
+    private lateinit var tvCurrentWind: TextView
+    private lateinit var tvCurrentWindDir: TextView
+    private lateinit var tvCurrentWave: TextView
+    private lateinit var tvCurrentDust: TextView
+    private lateinit var tvCurrentEmoji: TextView
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -32,10 +37,15 @@ class Weather6hFragment : Fragment() {
     ): View? {
         val view = inflater.inflate(R.layout.fragment_weather6h, container, false)
 
-        // 현재 날씨 뷰 초기화
+        // ✅ 현재 날씨 뷰 초기화
         tvCurrentTemp = view.findViewById(R.id.tvCurrentTemp)
         tvCurrentSky = view.findViewById(R.id.tvCurrentSky)
-        tvCurrentEtc = view.findViewById(R.id.tvCurrentEtc)
+        tvCurrentHumidity = view.findViewById(R.id.tvCurrentHumidity)
+        tvCurrentWind = view.findViewById(R.id.tvCurrentWind)
+        tvCurrentWindDir = view.findViewById(R.id.tvCurrentWindDir)
+        tvCurrentWave = view.findViewById(R.id.tvCurrentWave)
+        tvCurrentDust = view.findViewById(R.id.tvCurrentDust)
+        tvCurrentEmoji = view.findViewById(R.id.tvCurrentEmoji)
 
 
         tvCity = view.findViewById(R.id.tvCity6h)
@@ -91,14 +101,22 @@ class Weather6hFragment : Fragment() {
                             val temp = current.tempC.toString().toDoubleOrNull()?.toInt() ?: current.tempC
                             val humidity = current.humidityPct.toString().toDoubleOrNull()?.toInt() ?: current.humidityPct
                             val wind = current.windSpeedMs.toString().toDoubleOrNull()?.toInt() ?: current.windSpeedMs
-
+                            val wave = current.waveHeightM.toString().toDoubleOrNull()?.toInt()?.toString() ?: "정보 없음"
                             val emoji = getWeatherEmojiFromSky(current.sky)
 
+                            // ✅ 현재 날씨 세팅
+                            tvCurrentEmoji.text = emoji
                             tvCurrentTemp.text = "${temp}℃"
-                            tvCurrentSky.text = "$emoji ${current.sky}"
-                            tvCurrentEtc.text = "습도 ${humidity}% · 풍속 ${wind}m/s"
+                            tvCurrentSky.text = current.sky
+                            tvCurrentHumidity.text = "습도 ${humidity}%"
+                            tvCurrentWind.text = "풍속 ${wind}m/s"
+                            tvCurrentWindDir.text = "풍향 ${current.windDir}"
+                            tvCurrentWave.text = "파고 $wave m"
+                            tvCurrentDust.text = "미세먼지 ${current.pm10S}"
 
-                            adapter.updateWeather(weatherList.drop(1))
+                            // ✅ 리스트에는 나머지 5개만 전달
+                            val nextFive = weatherList.drop(1).take(5)
+                            adapter.updateWeather(nextFive)
                         }
 
                         tvCity.text = body.data.info.city
