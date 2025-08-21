@@ -19,6 +19,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.scan
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -70,7 +73,6 @@ data class MeasurementState(
     val lastMeasuredAt: Long?
 )
 
-// 첫 화면 동기화 힌트 상태(옵션)
 enum class SyncHint { NONE, PROMPT }
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -79,7 +81,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val sharedPreferences: SharedPreferences =
         PreferenceManager.getDefaultSharedPreferences(application)
 
-    // UI States
     private val _tideUiState = MutableStateFlow<TideUiState>(TideUiState.Loading)
     val tideUiState: StateFlow<TideUiState> = _tideUiState.asStateFlow()
 
@@ -95,7 +96,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _emergencyUiState = MutableStateFlow<EmergencyUiState>(EmergencyUiState.Loading)
     val emergencyUiState: StateFlow<EmergencyUiState> = _emergencyUiState.asStateFlow()
 
-    // 첫 화면 안내 배지(옵션)
     private val _syncHintState = MutableStateFlow(SyncHint.NONE)
     val syncHintState: StateFlow<SyncHint> = _syncHintState.asStateFlow()
 
@@ -116,22 +116,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val healthRepo = HealthRepository(application)
     val measurementState: StateFlow<MeasurementState> = healthRepo.measurementState
     private val hrMonitor = HeartRateMonitor(getApplication(), _selectedMarineActivityMode, healthRepo)
-    val liveHeartRate: StateFlow<Int> = hrMonitor.latestHeartRate
+
+    // 실시간 HR 스무딩: 0이 들어오면 직전 유효값 유지
+    val liveHeartRateStable: StateFlow<Int> =
+        hrMonitor.latestHeartRate
+            .scan(0) { prevValid, now -> if (now > 0) now else prevValid }
+            .distinctUntilChanged()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5000),
+                initialValue = 0
+            )
 
     // 내부 플래그/작업
     private var initialSyncDone = false
     private var pollingJob: Job? = null
 
     init {
-        // Emergency 화면: 즉시 폴백 Success 한 번 표시
         _emergencyUiState.value = EmergencyUiState.Success(
             lastMeasured = "--:--:--",
-            locationStatus = "위치 정보 없음",
+            locationStatus = "폰앱 열고 새로고침 필요",
             marineMode = _selectedMarineActivityMode.value,
             averageHeartRate = hrMonitor.averageHeartRate.value
         )
 
-        // 1) Tide
+        // Tide
         viewModelScope.launch {
             repo.getTideData()
                 .catch { _tideUiState.value = TideUiState.Error }
@@ -141,37 +150,45 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
         }
 
-        // 2) Weather 6h
+        // Weather 6h
         viewModelScope.launch {
             repo.getWeatherData()
                 .catch { _weatherUiState.value = WeatherUiState.Error }
                 .collect { _weatherUiState.value = WeatherUiState.Success(it.data) }
         }
 
-        // 3) Weather 7d
+        // Weather 7d
         viewModelScope.launch {
             repo.getWeather7dData()
                 .catch { _detailedWeatherUiState.value = DetailedWeatherUiState.Error }
                 .collect { _detailedWeatherUiState.value = DetailedWeatherUiState.Success(it.data) }
         }
 
-        // 4) Fishing
+        // Fishing
         viewModelScope.launch {
             repo.getFishingPoints()
                 .catch { _fishingPointsUiState.value = FishingPointsUiState.Error }
                 .collect { _fishingPointsUiState.value = FishingPointsUiState.Success(it.data) }
         }
 
-        // 5) Emergency - 위치 도착 시 갱신
+        // Emergency - 위치 도착 시 (좌표만)
         viewModelScope.launch {
             repo.getLocationData()
-                .catch { /* 위치 실패는 폴백 유지 */ }
+                .catch { /* 폴백 유지 */ }
                 .collect { locationResponse ->
+                    val lat = locationResponse.data.latitude
+                    val lon = locationResponse.data.longitude
+                    val locationStatus = if (!(lat == 0.0 && lon == 0.0)) {
+                        val latStr = String.format(Locale.getDefault(), "%.4f", lat)
+                        val lonStr = String.format(Locale.getDefault(), "%.4f", lon)
+                        "($latStr, $lonStr)"
+                    } else "폰앱 열고 새로고침 필요"
+
                     val measuredAt = measurementState.value.lastMeasuredAt
                     val lastMeasured = measuredAt?.let {
                         SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(it))
                     } ?: "--:--:--"
-                    val locationStatus = locationResponse.data.address ?: "위치 정보 없음"
+
                     _emergencyUiState.value = EmergencyUiState.Success(
                         lastMeasured = lastMeasured,
                         locationStatus = locationStatus,
@@ -182,10 +199,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
         }
 
-        // 6) 자동 요청 - 앱 시작 직후 1회
+        // 자동 요청들
         viewModelScope.launch { safeRequestRefresh("initial") }
 
-        // 7) 연결 true 전환 시 최초 1회 재요청
         viewModelScope.launch {
             var fired = false
             phoneConnected
@@ -199,7 +215,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
         }
 
-        // 8) 초기 타임아웃 후 폴링 시작(응답 없을 때)
         viewModelScope.launch {
             val gotAny = waitAnyDataArrived(timeoutMs = 8000L)
             if (!gotAny) {
@@ -235,13 +250,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val backoffs = listOf(6000L, 8000L, 10000L)
             for ((idx, waitMs) in backoffs.withIndex()) {
                 if (initialSyncDone) break
-
                 if (phoneConnected.value) {
                     safeRequestRefresh("polling-connect-$idx")
                 } else {
                     safeRequestRefresh("polling-$idx")
                 }
-
                 val got = waitAnyDataArrived(timeoutMs = waitMs)
                 if (got) break
             }

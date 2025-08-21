@@ -36,16 +36,20 @@ class PhoneWearableService : WearableListenerService() {
         private const val PREF = "phone_cache"
         private val gson = Gson()
         private fun sp(ctx: Context) = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+
         fun saveJson(ctx: Context, key: String, any: Any) {
             sp(ctx).edit().putString(key, gson.toJson(any)).apply()
         }
-        fun loadJson(ctx: Context, key: String): String? = sp(ctx).getString(key, null)
+
+        fun loadJson(ctx: Context, key: String): String? =
+            sp(ctx).getString(key, null)
     }
 
     @SuppressLint("MissingPermission")
     override fun onMessageReceived(messageEvent: MessageEvent) {
         Log.d(TAG, "Received message: ${messageEvent.path}")
         val nodeId = messageEvent.sourceNodeId
+
         when (messageEvent.path) {
             "/request/tide" -> {
                 PhoneCache.loadJson(this, KEY_TIDE)?.let {
@@ -77,11 +81,14 @@ class PhoneWearableService : WearableListenerService() {
                 }
                 requestRefresh(nodeId)
             }
-            "/request/refresh_all_data" -> requestRefresh(nodeId)
+            "/request/refresh_all_data" -> {
+                requestRefresh(nodeId)
+            }
             "/emergency/sos" -> {
                 val reason = String(messageEvent.data)
                 handleSosTrigger(reason)
             }
+            else -> Unit
         }
     }
 
@@ -111,6 +118,8 @@ class PhoneWearableService : WearableListenerService() {
             )
             .addOnSuccessListener { onResult(it) }
             .addOnFailureListener { onResult(null) }
+
+        // 3초 타임아웃 보조
         android.os.Handler(mainLooper).postDelayed({ onResult(null) }, 3000)
     }
 
@@ -145,7 +154,7 @@ class PhoneWearableService : WearableListenerService() {
                         val body = response.body()
                         val payload = gson.toJson(body).toByteArray()
                         sendMessageToWatch("/response/tide", payload, nodeId)
-                        body?.let { PhoneCache.saveJson(this@PhoneWearableService, KEY_TIDE, it) }
+                        body?.let { PhoneCache.saveJson(this@PhoneWearableService, KEY_TIDE, it) } // 캐시 저장
                     } else {
                         sendMessageToWatch("/response/tide/error", "API Error: ${response.code()}".toByteArray(), nodeId)
                     }
@@ -168,7 +177,7 @@ class PhoneWearableService : WearableListenerService() {
                         val body = response.body()
                         val payload = gson.toJson(body).toByteArray()
                         sendMessageToWatch("/response/weather", payload, nodeId)
-                        body?.let { PhoneCache.saveJson(this@PhoneWearableService, KEY_W6H, it) }
+                        body?.let { PhoneCache.saveJson(this@PhoneWearableService, KEY_W6H, it) } // 캐시 저장
                     } else {
                         sendMessageToWatch("/response/weather/error", "API Error: ${response.code()}".toByteArray(), nodeId)
                     }
@@ -191,7 +200,7 @@ class PhoneWearableService : WearableListenerService() {
                         val body = response.body()
                         val payload = gson.toJson(body).toByteArray()
                         sendMessageToWatch("/response/7dweather", payload, nodeId)
-                        body?.let { PhoneCache.saveJson(this@PhoneWearableService, KEY_W7D, it) }
+                        body?.let { PhoneCache.saveJson(this@PhoneWearableService, KEY_W7D, it) } // 캐시 저장
                     } else {
                         sendMessageToWatch("/response/7dweather/error", "API Error: ${response.code()}".toByteArray(), nodeId)
                     }
@@ -214,7 +223,7 @@ class PhoneWearableService : WearableListenerService() {
                         val body = response.body()
                         val payload = gson.toJson(body).toByteArray()
                         sendMessageToWatch("/response/locations", payload, nodeId)
-                        body?.let { PhoneCache.saveJson(this@PhoneWearableService, KEY_FISH, it) }
+                        body?.let { PhoneCache.saveJson(this@PhoneWearableService, KEY_FISH, it) } // 캐시 저장
                     } else {
                         sendMessageToWatch("/response/locations/error", "API Error: ${response.code()}".toByteArray(), nodeId)
                     }
@@ -237,7 +246,7 @@ class PhoneWearableService : WearableListenerService() {
                 nearestPoint = ""
             )
             val resp = LocationResponse("success", 200, "Location fetched", data)
-            PhoneCache.saveJson(this, KEY_LAST_LOC, data)
+            PhoneCache.saveJson(this, KEY_LAST_LOC, data) // 좌표 캐시 갱신
             sendMessageToWatch("/response/current_location", gson.toJson(resp).toByteArray(), nodeId)
         } else {
             fusedLocationClient.lastLocation
@@ -252,7 +261,7 @@ class PhoneWearableService : WearableListenerService() {
                             nearestPoint = ""
                         )
                         val resp = LocationResponse("success", 200, "Location fetched", data)
-                        PhoneCache.saveJson(this, KEY_LAST_LOC, data)
+                        PhoneCache.saveJson(this, KEY_LAST_LOC, data) // 좌표 캐시 갱신
                         sendMessageToWatch("/response/current_location", gson.toJson(resp).toByteArray(), nodeId)
                     } else {
                         sendMessageToWatch("/response/current_location/error", "Location not available".toByteArray(), nodeId)
@@ -264,14 +273,16 @@ class PhoneWearableService : WearableListenerService() {
         }
     }
 
-    // SOS 처리(기존 로직 유지)
+    // SOS 처리(기존 로직)
     @SuppressLint("MissingPermission")
     private fun handleSosTrigger(reason: String) {
         Log.e(TAG, "!!! SOS TRIGGERED !!! Reason: $reason")
         val emergencyNumber = "01012345678" // TODO 실제 번호
         fusedLocationClient.lastLocation
             .addOnSuccessListener { location ->
-                val link = location?.let { "https://www.google.com/maps/search/?api=1&query=${it.latitude},${it.longitude}" } ?: "위치 정보 없음"
+                val link = location?.let {
+                    "https://www.google.com/maps/search/?api=1&query=${it.latitude},${it.longitude}"
+                } ?: "위치 정보 없음"
                 val sms = SmsManager.getDefault()
                 val msg = "긴급 SOS!\n사유: $reason\n위치: $link"
                 try {
@@ -292,11 +303,14 @@ class PhoneWearableService : WearableListenerService() {
         val channelId = "sos_channel"
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            val ch = NotificationChannel(channelId, "SOS Alerts", NotificationManager.IMPORTANCE_HIGH).apply {
-                description = "Notifications for emergency SOS alerts"
-            }
+            val ch = NotificationChannel(
+                channelId,
+                "SOS Alerts",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply { description = "Notifications for emergency SOS alerts" }
             nm.createNotificationChannel(ch)
         }
+
         val n = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle("긴급 SOS 발동!")
@@ -317,6 +331,8 @@ class PhoneWearableService : WearableListenerService() {
     companion object {
         private const val TAG = "PhoneWearableService"
         private const val SOS_NOTIFICATION_ID = 1001
+
+        // 캐시 키
         private const val KEY_LAST_LOC = "last_loc_json"
         private const val KEY_TIDE = "last_tide_json"
         private const val KEY_W6H = "last_w6h_json"
