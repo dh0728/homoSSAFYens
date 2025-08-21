@@ -27,26 +27,43 @@ class Weather6hAdapter(private var items: List<Weather6hItem>) :
     override fun onBindViewHolder(holder: Weather6hViewHolder, position: Int) {
         val item = items[position]
 
-        // 시간만 추출 (T 뒤부터 HH:mm)
         val time = item.time.substring(11, 16)
 
+        // ✅ 소수점 제거
+        val temp = item.tempC.toString().toDoubleOrNull()?.toInt() ?: item.tempC
+        val humidity = item.humidityPct.toString().toDoubleOrNull()?.toInt() ?: item.humidityPct
+        val wind = item.windSpeedMs.toString().toDoubleOrNull()?.toInt() ?: item.windSpeedMs
+        val wave = item.waveHeightM?.toDoubleOrNull()?.toInt()?.toString() ?: "정보 없음"
+
         holder.tvTime.text = time
-        holder.tvSkyTemp.text = "${item.sky} · ${item.tempC}℃"
-        holder.tvRainHumidity.text = "강수량: ${item.rainMm}mm · 습도: ${item.humidityPct}%"
-        // 파고 처리 (NaN → "정보 없음")
-        val waveText = item.waveHeightM?.toDoubleOrNull()?.let { "${it}m" } ?: "정보 없음"
+        holder.tvSkyTemp.text = "${item.sky} · ${temp}℃"
+        holder.tvRainHumidity.text = "강수량: ${item.rainMm.toString().toDoubleOrNull()?.toInt() ?: 0}mm · 습도: ${humidity}%"
+        holder.tvWindWave.text = "풍향: ${item.windDir} · 풍속: ${wind}m/s · 파고: $wave m"
 
-        holder.tvWindWave.text =
-            "풍향: ${item.windDir} · 풍속: ${item.windSpeedMs}m/s · 파고: $waveText"
-
-        holder.tvDust.text =
-            "PM10: ${item.pm10S}(${item.pm10}) · PM2.5: ${item.pm25S}(${item.pm25})"
+        // ✅ 미세먼지는 수치 빼고 상태만
+        holder.tvDust.text = "PM10: ${item.pm10S} · PM2.5: ${item.pm25S}"
     }
+
+
 
     override fun getItemCount(): Int = items.size
 
     fun updateWeather(newItems: List<Weather6hItem>) {
         items = newItems
         notifyDataSetChanged()
+    }
+
+    // ✅ sky → emoji 매핑 함수
+    private fun getWeatherEmojiFromSky(sky: String): String {
+        return when {
+            sky.contains("맑음") -> "☀️"
+            sky.contains("구름많음") -> "☁️"
+            sky.contains("구름조금") -> "🌤️"
+            sky.contains("흐림") -> "☁️"
+            sky.contains("비/눈") -> "🌧️"
+            sky.contains("비") -> "🌧️"
+            sky.contains("눈") -> "🌨️"
+            else -> "❔"
+        }
     }
 }

@@ -30,7 +30,8 @@ class WeeklyAdapter(private var items: List<TideData>) :
         holder.tvDate.text = "${item.date} (${item.weekday}) · 음력 ${item.lunar}"
         holder.tvLocation.text = "${item.locationName} · ${item.mul}"
         holder.tvSunMoon.text =
-            "일출: ${item.sunrise} · 일몰: ${item.sunset}\n월출: ${item.moonrise ?: "-"} · 월몰: ${item.moonset ?: "-"}"
+            "일출: ${formatTime(item.sunrise)} · 일몰: ${formatTime(item.sunset)}\n" +
+                    "월출: ${formatTime(item.moonrise)} · 월몰: ${formatTime(item.moonset)}"
 
         // 하위 이벤트 리스트
         holder.rvDayEvents.layoutManager = LinearLayoutManager(holder.itemView.context)
@@ -43,4 +44,10 @@ class WeeklyAdapter(private var items: List<TideData>) :
         items = newItems
         notifyDataSetChanged()
     }
+
+    private fun formatTime(raw: String?): String {
+        if (raw.isNullOrBlank()) return "-"
+        return raw.substring(0, 5) // "07:15:00" → "07:15"
+    }
+
 }
