@@ -73,6 +73,7 @@ class HeartRateMonitor(private val context: Context, private val marineActivityM
             if (heartRateCount > 0) {
                 val avgHr = heartRateSum / heartRateCount
                 _averageHeartRate.value = avgHr
+                healthRepository.setLastAverageHr(avgHr)
                 Log.d("HeartRateMonitor", "Average Heart Rate: ${_averageHeartRate.value}")
                 healthRepository.setLastAverageHr(avgHr)
             } else {
