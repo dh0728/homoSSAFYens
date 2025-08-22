@@ -102,7 +102,7 @@ fun TideInfoCard(tideData: TideData) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 4.dp, vertical = 8.dp),
+            .padding(horizontal = 8.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
@@ -113,7 +113,7 @@ fun TideInfoCard(tideData: TideData) {
 
         // 메인 타이틀
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.padding(top = 2.dp), //.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -145,34 +145,34 @@ fun TideInfoCard(tideData: TideData) {
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 0.dp)
+                .padding(horizontal = 4.dp)
         ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 9.dp)
             ) {
                 TideEventCell(
                     event = tideData.events.getOrNull(0) ?: TideEvent("--:--", 0, "만조", 0),
-                    modifier = Modifier.weight(0.45f)
+                    modifier = Modifier.weight(0.48f)
                 )
                 TideEventCell(
                     event = tideData.events.getOrNull(1) ?: TideEvent("--:--", 0, "간조", 0),
-                    modifier = Modifier.weight(0.45f)
+                    modifier = Modifier.weight(0.48f)
                 )
             }
             Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 9.dp)
             ) {
                 TideEventCell(
                     event = tideData.events.getOrNull(2) ?: TideEvent("--:--", 0, "만조", 0),
-                    modifier = Modifier.weight(0.45f)
+                    modifier = Modifier.weight(0.48f)
                 )
                 TideEventCell(
                     event = tideData.events.getOrNull(3) ?: TideEvent("--:--", 0, "간조", 0),
-                    modifier = Modifier.weight(0.45f)
+                    modifier = Modifier.weight(0.48f)
                 )
             }
         }
@@ -220,7 +220,7 @@ fun TideEventCell(event: TideEvent, modifier: Modifier = Modifier) {
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
             .background(backgroundColor)
-            .padding(6.dp),
+            .padding(horizontal = 5.dp, vertical = 3.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -235,7 +235,7 @@ fun TideEventCell(event: TideEvent, modifier: Modifier = Modifier) {
                         else -> TextTertiary
                     }
                 )
-                .padding(horizontal = 4.dp, vertical = 2.dp)
+                .padding(horizontal = 4.dp, vertical = 1.dp)
         ) {
             Text(
                 text = trendLabel,
@@ -262,12 +262,12 @@ fun TideEventCell(event: TideEvent, modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.caption1,
                 color = TextSecondary
             )
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(3.dp))
             Icon(
                 imageVector = arrowIcon,
                 contentDescription = trendLabel,
                 tint = arrowColor,
-                modifier = Modifier.size(14.dp)
+                modifier = Modifier.size(10.dp)
             )
             Spacer(Modifier.width(2.dp))
             val d = event.deltaCm ?: 0

@@ -75,7 +75,7 @@ fun WeatherInfoCard(weatherData: Weather6hData) {
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
                     .background(BackgroundSecondary)
-                    .padding(horizontal = 12.dp, vertical = 5.dp), // 🔥 Text 주변만 배경
+                    .padding(horizontal = 12.dp, vertical = 5.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -110,7 +110,7 @@ fun WeatherInfoCard(weatherData: Weather6hData) {
                     Text(
                         text = getWeatherEmojiFromSky(currentWeather.sky),
                         style = MaterialTheme.typography.display2,
-                        modifier = Modifier.padding(end = 8.dp)
+                        modifier = Modifier.padding(end = 6.dp)
                     )
                     Text(
                         text = "${currentWeather.tempC}°",
@@ -124,7 +124,7 @@ fun WeatherInfoCard(weatherData: Weather6hData) {
                     text = currentWeather.sky,
                     style = MaterialTheme.typography.body1,
                     color = TextSecondary,
-                    modifier = Modifier.padding(bottom = 6.dp)
+                    modifier = Modifier.padding(bottom = 3.dp)
                 )
             }
 
@@ -136,7 +136,7 @@ fun WeatherInfoCard(weatherData: Weather6hData) {
                     // 1행: 강수량 / 습도 / 파고
                     Row(
                         horizontalArrangement = Arrangement.SpaceEvenly,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp)
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("강수량", style = MaterialTheme.typography.caption1, color = TextSecondary)
@@ -156,12 +156,12 @@ fun WeatherInfoCard(weatherData: Weather6hData) {
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     // 2행: 미세먼지 / 바람
                     Row(
                         horizontalArrangement = Arrangement.SpaceEvenly,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp)
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("미세먼지", style = MaterialTheme.typography.caption1, color = TextSecondary)
