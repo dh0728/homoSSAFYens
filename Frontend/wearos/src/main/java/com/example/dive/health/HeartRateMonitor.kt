@@ -5,6 +5,8 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import com.example.dive.data.model.LocationData
 import com.example.dive.emergency.EmergencyManager
@@ -19,7 +21,15 @@ import kotlinx.coroutines.launch
 
 import com.example.dive.data.HealthRepository
 
-class HeartRateMonitor(private val context: Context, private val marineActivityModeFlow: StateFlow<MarineActivityMode>, private val healthRepository: HealthRepository) : SensorEventListener {
+class HeartRateMonitor(
+    private val context: Context,
+    private var marineActivityModeFlow: StateFlow<MarineActivityMode>,
+    private val healthRepository: HealthRepository
+) : SensorEventListener {
+
+    fun setModeFlow(flow: StateFlow<MarineActivityMode>) {
+        this.marineActivityModeFlow = flow
+    }
 
     private val sensorManager: SensorManager by lazy {
         context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -32,10 +42,14 @@ class HeartRateMonitor(private val context: Context, private val marineActivityM
     private var isMonitoring = false
 
     private val _latestHeartRate = MutableStateFlow(0)
-    val latestHeartRate = _latestHeartRate.asStateFlow()
+    val latestHeartRate: StateFlow<Int> = _latestHeartRate.asStateFlow()
 
     private var heartRateSum = 0
     private var heartRateCount = 0
+
+    private val warmupSkipCount = 5
+    private var skipped = 0
+
     private val _averageHeartRate = MutableStateFlow(0)
     val averageHeartRate = _averageHeartRate.asStateFlow()
 
@@ -47,83 +61,58 @@ class HeartRateMonitor(private val context: Context, private val marineActivityM
 
     // No init block needed for marineActivityModeFlow collection here anymore
 
-    fun startMonitoring() {
-        if (heartRateSensor == null) {
-            Log.e("HeartRateMonitor", "Heart rate sensor not available")
-            return
-        }
+    fun startMonitoring(durationMillis: Long = 40_000L, onStopped: (() -> Unit)? = null) {
         if (!isMonitoring) {
-            // Reset for new measurement
+            // 리셋
             heartRateSum = 0
             heartRateCount = 0
-            _averageHeartRate.value = 0 // Reset average as well
+            skipped = 0
+            _latestHeartRate.value = 0
 
             sensorManager.registerListener(this, heartRateSensor, SensorManager.SENSOR_DELAY_NORMAL)
             isMonitoring = true
             Log.d("HeartRateMonitor", "Started monitoring heart rate")
         }
+
+        // duration 후 자동 종료
+        Handler(Looper.getMainLooper()).postDelayed({
+            stopMonitoring()
+            onStopped?.invoke()
+        }, durationMillis)
     }
 
     fun stopMonitoring() {
-        if (isMonitoring) {
-            sensorManager.unregisterListener(this)
-            isMonitoring = false
+        if (!isMonitoring) return
+        sensorManager.unregisterListener(this)
+        isMonitoring = false
 
-            // Calculate average heart rate
-            if (heartRateCount > 0) {
-                val avgHr = heartRateSum / heartRateCount
-                _averageHeartRate.value = avgHr
-                healthRepository.setLastAverageHr(avgHr)
-                Log.d("HeartRateMonitor", "Average Heart Rate: ${_averageHeartRate.value}")
-                healthRepository.setLastAverageHr(avgHr)
-            } else {
-                _averageHeartRate.value = 0 // No valid data
-                Log.d("HeartRateMonitor", "No valid heart rate data for average calculation.")
-                healthRepository.setLastAverageHr(0)
-            }
-            Log.d("HeartRateMonitor", "Stopped monitoring heart rate")
-        }
+        // 평균 계산 및 기록
+        val avg = if (heartRateCount > 0) heartRateSum / heartRateCount else 0
+        healthRepository.setLastAverageHr(avg.takeIf { it > 0 } ?: 0)
+        Log.d("HeartRateMonitor", "Average Heart Rate: ${avg}")
+        Log.d("HeartRateMonitor", "Stopped monitoring heart rate")
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
-        if (event?.sensor?.type == Sensor.TYPE_HEART_RATE) {
-            val heartRate = event.values[0].toInt()
-            _latestHeartRate.value = heartRate
-            Log.d("HeartRateMonitor", "Current Heart Rate: $heartRate")
+        if (event?.sensor?.type != Sensor.TYPE_HEART_RATE) return
 
-            // Accumulate heart rate for average calculation
-            if (heartRate > 0) { // Only accumulate valid heart rates
-                heartRateSum += heartRate
-                heartRateCount++
-            }
+        val hr = event.values[0].toInt()
 
-            // Dummy values for now, these should come from actual sensors/data
-            val dummyLocationData = LocationData(0.0, 0.0, 0.0f, 0L, "Dummy Address")
-            val dummyRecentActivityLevel = 50
-            val dummyRecentHeartRates = listOf(heartRate, heartRate + 1, heartRate - 1)
-            val dummyRecentPositionData = listOf(0.1f, 0.2f, 0.15f)
-            val dummyRecentMovementSpeed = 0
-            val dummyRecentMovementData = listOf(0.1f, 0.2f, 0.15f)
+        // 초기 5 이벤트 스킵(실시간/평균 모두 미반영)
+        if (skipped < warmupSkipCount) {
+            skipped++
+            Log.d("HeartRateMonitor", "Warmup skip $skipped/$warmupSkipCount (raw=$hr)")
+            return
+        }
 
-            val currentUserState = detector.detectCurrentUserState(
-                marineMode = marineActivityModeFlow.value,
-                currentHeartRate = heartRate,
-                locationData = dummyLocationData,
-                recentActivityLevel = dummyRecentActivityLevel,
-                recentHeartRates = dummyRecentHeartRates,
-                recentPositionData = dummyRecentPositionData,
-                recentMovementSpeed = dummyRecentMovementSpeed,
-                recentMovementData = dummyRecentMovementData
-            )
-            val thresholds = detector.getHeartRateThresholds(currentUserState)
+        // 실시간 반영
+        _latestHeartRate.value = hr
+        Log.d("HeartRateMonitor", "Current Heart Rate: $hr")
 
-            // Anomaly detection using dynamic thresholds
-            if (heartRate > 0 && heartRate < thresholds.criticalMin) {
-                EmergencyManager.triggerEmergencySOS(context, "자동 감지: 심각한 서맥 감지 (${heartRate}bpm)")
-            } else if (heartRate > 0 && heartRate < thresholds.warningMin) {
-                Log.w("HeartRateMonitor", "Warning: Heart rate below warning threshold (${heartRate}bpm)")
-                // TODO: Implement warning notification/vibration
-            }
+        // 평균 누적(유효값만)
+        if (hr > 0) {
+            heartRateSum += hr
+            heartRateCount++
         }
     }
 

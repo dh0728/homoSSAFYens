@@ -81,21 +81,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val sharedPreferences: SharedPreferences =
         PreferenceManager.getDefaultSharedPreferences(application)
 
+    // UI States ...
     private val _tideUiState = MutableStateFlow<TideUiState>(TideUiState.Loading)
     val tideUiState: StateFlow<TideUiState> = _tideUiState.asStateFlow()
-
     private val _weatherUiState = MutableStateFlow<WeatherUiState>(WeatherUiState.Loading)
     val weatherUiState: StateFlow<WeatherUiState> = _weatherUiState.asStateFlow()
-
     private val _fishingPointsUiState = MutableStateFlow<FishingPointsUiState>(FishingPointsUiState.Loading)
     val fishingPointsUiState: StateFlow<FishingPointsUiState> = _fishingPointsUiState.asStateFlow()
-
     private val _detailedWeatherUiState = MutableStateFlow<DetailedWeatherUiState>(DetailedWeatherUiState.Loading)
     val detailedWeatherUiState: StateFlow<DetailedWeatherUiState> = _detailedWeatherUiState.asStateFlow()
-
     private val _emergencyUiState = MutableStateFlow<EmergencyUiState>(EmergencyUiState.Loading)
     val emergencyUiState: StateFlow<EmergencyUiState> = _emergencyUiState.asStateFlow()
-
     private val _syncHintState = MutableStateFlow(SyncHint.NONE)
     val syncHintState: StateFlow<SyncHint> = _syncHintState.asStateFlow()
 
@@ -112,32 +108,35 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val phoneConnected: StateFlow<Boolean> = repo.isConnected
 
-    // Health
-    private val healthRepo = HealthRepository(application)
+    // === App 싱글톤 참조 ===
+    private val app = getApplication() as com.example.dive.App
+    private val healthRepo = app.healthRepo
     val measurementState: StateFlow<MeasurementState> = healthRepo.measurementState
-    private val hrMonitor = HeartRateMonitor(getApplication(), _selectedMarineActivityMode, healthRepo)
+    private val hrMonitor = app.heartRateMonitor
 
-    // 실시간 HR 스무딩: 0이 들어오면 직전 유효값 유지
+    // 실시간 HR 스무딩: 0이면 직전 유효값 유지
     val liveHeartRateStable: StateFlow<Int> =
         hrMonitor.latestHeartRate
             .scan(0) { prevValid, now -> if (now > 0) now else prevValid }
             .distinctUntilChanged()
             .stateIn(
                 scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5000),
+                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 0),
                 initialValue = 0
             )
 
-    // 내부 플래그/작업
     private var initialSyncDone = false
     private var pollingJob: Job? = null
 
     init {
+        // HeartRateMonitor가 모드 Flow 교체를 지원하도록 했을 때만 호출
+        // hrMonitor.setModeFlow(_selectedMarineActivityMode)
+
         _emergencyUiState.value = EmergencyUiState.Success(
             lastMeasured = "--:--:--",
             locationStatus = "폰앱 열고 새로고침 필요",
             marineMode = _selectedMarineActivityMode.value,
-            averageHeartRate = hrMonitor.averageHeartRate.value
+            averageHeartRate = measurementState.value.lastAverageHr
         )
 
         // Tide
@@ -171,10 +170,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 .collect { _fishingPointsUiState.value = FishingPointsUiState.Success(it.data) }
         }
 
-        // Emergency - 위치 도착 시 (좌표만)
+        // Emergency (위치)
         viewModelScope.launch {
             repo.getLocationData()
-                .catch { /* 폴백 유지 */ }
+                .catch { /* keep fallback */ }
                 .collect { locationResponse ->
                     val lat = locationResponse.data.latitude
                     val lon = locationResponse.data.longitude
@@ -193,15 +192,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         lastMeasured = lastMeasured,
                         locationStatus = locationStatus,
                         marineMode = _selectedMarineActivityMode.value,
-                        averageHeartRate = hrMonitor.averageHeartRate.value
+                        averageHeartRate = measurementState.value.lastAverageHr
                     )
+
                     markInitialSyncReceived()
                 }
         }
 
-        // 자동 요청들
+        // 초기 및 폴링 요청
         viewModelScope.launch { safeRequestRefresh("initial") }
-
         viewModelScope.launch {
             var fired = false
             phoneConnected
@@ -214,7 +213,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
         }
-
         viewModelScope.launch {
             val gotAny = waitAnyDataArrived(timeoutMs = 8000L)
             if (!gotAny) {
@@ -270,6 +268,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setSelectedMarineActivityMode(mode: MarineActivityMode) {
         _selectedMarineActivityMode.value = mode
         sharedPreferences.edit().putString(KEY_MARINE_ACTIVITY_MODE, mode.name).apply()
+        // hrMonitor.setModeFlow(_selectedMarineActivityMode) // 필요 시
     }
 
     fun setMonitoringEnabled(enabled: Boolean) {

@@ -50,6 +50,7 @@ class MainActivity : ComponentActivity() {
         requestPermissions()
 
         setContent {
+            val activityViewModel = this@MainActivity.viewModel
             DiveTheme {
                 val tideUiState by viewModel.tideUiState.collectAsState()
                 val weatherUiState by viewModel.weatherUiState.collectAsState()
@@ -62,7 +63,8 @@ class MainActivity : ComponentActivity() {
                     weatherUiState = weatherUiState,
                     detailedWeatherUiState = detailedWeatherUiState,
                     fishingPointsUiState = fishingPointsUiState,
-                    emergencyUiState = emergencyUiState
+                    emergencyUiState = emergencyUiState,
+                    activityViewModel = activityViewModel
                 )
             }
         }
@@ -130,7 +132,8 @@ fun MainApp(
     weatherUiState: WeatherUiState,
     detailedWeatherUiState: DetailedWeatherUiState,
     fishingPointsUiState: FishingPointsUiState,
-    emergencyUiState: EmergencyUiState
+    emergencyUiState: EmergencyUiState,
+    activityViewModel: MainViewModel
 ) {
     val pagerState = rememberPagerState(pageCount = { 6 })
 
@@ -164,7 +167,7 @@ fun MainApp(
                     1 -> WeatherScreen(uiState = weatherUiState)
                     2 -> DetailedWeatherScreen(uiState = detailedWeatherUiState)
                     3 -> FishingPointsScreen(uiState = fishingPointsUiState)
-                    4 -> EmergencyScreen(viewModel = viewModel())
+                    4 -> EmergencyScreen(viewModel = activityViewModel)
                     5 -> SettingsScreen()
                 }
             }

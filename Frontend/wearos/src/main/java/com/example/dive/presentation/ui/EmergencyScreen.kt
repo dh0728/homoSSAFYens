@@ -119,26 +119,54 @@ fun EmergencyInfoCard(
             Column(Modifier.padding(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Favorite, contentDescription = "Heart Rate", tint = AccentRed, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
+                    Spacer(Modifier.width(6.dp))
 
-                    val hrLine =
-                        if (measurementState.isMeasuring) {
-                            if (liveHeartRate > 0)
-                                "심박수: $liveHeartRate BPM (실시간)"
-                            else
-                                "심박수: 측정 중…"
-                        } else {
-                            when (val avg = measurementState.lastAverageHr) {
-                                null -> "심박수: --- BPM"
-                                else -> "심박수: $avg BPM (평균)"
-                            }
-                        }
+                    val mainValue = when {
+                        measurementState.isMeasuring && liveHeartRate > 0 -> "$liveHeartRate BPM"
+                        measurementState.isMeasuring && liveHeartRate <= 0 -> "측정 중…"
+                        (measurementState.lastAverageHr ?: 0) > 0 -> "${measurementState.lastAverageHr} BPM"
+                        else -> "--- BPM"
+                    }
 
-                    Text(hrLine, style = MaterialTheme.typography.body1, color = TextPrimary)
+                    Text(
+                        text = "심박수: $mainValue",
+                        style = MaterialTheme.typography.body1,
+                        color = TextPrimary
+                    )
                 }
 
                 Spacer(Modifier.height(4.dp))
-                Text("마지막 측정: $lastMeasured", style = MaterialTheme.typography.caption1, color = TextTertiary)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val lastMeasuredText = measurementState.lastMeasuredAt?.let {
+                        java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date(it))
+                    } ?: lastMeasured
+
+                    Text(
+                        text = "마지막 측정: $lastMeasuredText",
+                        style = MaterialTheme.typography.caption1,
+                        color = TextTertiary,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    val suffix = when {
+                        measurementState.isMeasuring && liveHeartRate > 0 -> "(실시간)"
+                        (!measurementState.isMeasuring && (measurementState.lastAverageHr ?: 0) > 0) -> "(평균)"
+                        measurementState.isMeasuring && liveHeartRate <= 0 -> "(측정 중)"
+                        else -> ""
+                    }
+
+                    if (suffix.isNotEmpty()) {
+                        Text(
+                            text = suffix,
+                            style = MaterialTheme.typography.caption1,
+                            color = TextSecondary,
+                            modifier = Modifier.wrapContentWidth(Alignment.End)
+                        )
+                    }
+                }
             }
         }
 
