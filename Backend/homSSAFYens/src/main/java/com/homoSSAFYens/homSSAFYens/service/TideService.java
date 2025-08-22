@@ -24,8 +24,8 @@ public class TideService {
     private final ObjectMapper om;
 
     // --- 캐시 정책 ---
-    private static final int GEO_DECIMALS = 3;
-    private static final Duration TTL = Duration.ofHours(6);// ≈110m
+    private static final int GEO_DECIMALS = 3;//110m
+    private static final Duration TTL = Duration.ofHours(6);
 
     public TideService(TideApiClient tideApiClient,
                        CacheService cacheService,
