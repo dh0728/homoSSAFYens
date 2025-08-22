@@ -1,24 +1,143 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="12dp"
+    android:fillViewport="true"
     android:background="@android:color/white">
 
-    <!-- 상단 도시명 -->
-    <TextView
-        android:id="@+id/tvCity6h"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="부산광역시 해운대구"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:paddingBottom="8dp"/>
+        android:orientation="vertical"
+        android:padding="12dp">
 
-    <!-- 날씨 시간별 리스트 -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvWeather6h"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:overScrollMode="never"/>
-</LinearLayout>
+        <!-- ✅ 현재 날씨 카드 -->
+        <LinearLayout
+            android:id="@+id/layoutCurrentWeather"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:background="@android:color/white"
+            android:elevation="4dp"
+            android:layout_marginBottom="12dp">
+
+            <!-- 도시명 -->
+            <TextView
+                android:id="@+id/tvCity6h"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="부산광역시 해운대구"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:paddingBottom="6dp"/>
+
+            <!-- 아이콘 + 현재 온도 -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_gravity="center_horizontal"
+                android:paddingBottom="4dp">
+
+                <TextView
+                    android:id="@+id/tvCurrentEmoji"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="☀️"
+                    android:textSize="36sp"
+                    android:paddingEnd="6dp"/>
+
+                <TextView
+                    android:id="@+id/tvCurrentTemp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="26℃"
+                    android:textSize="36sp"
+                    android:textStyle="bold"/>
+            </LinearLayout>
+
+            <!-- 날씨 설명 -->
+            <TextView
+                android:id="@+id/tvCurrentSky"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="맑음"
+                android:textSize="16sp"
+                android:gravity="center"
+                android:paddingBottom="8dp"/>
+
+            <!-- 2행 정보 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <!-- 첫 번째 행 -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center">
+
+                    <TextView
+                        android:id="@+id/tvCurrentHumidity"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="습도 60%"
+                        android:textSize="14sp"
+                        android:paddingEnd="12dp"/>
+
+                    <TextView
+                        android:id="@+id/tvCurrentWind"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="풍속 2m/s"
+                        android:textSize="14sp"
+                        android:paddingEnd="12dp"/>
+
+                    <TextView
+                        android:id="@+id/tvCurrentWindDir"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="풍향 SE"
+                        android:textSize="14sp"/>
+                </LinearLayout>
+
+                <!-- 두 번째 행 -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center">
+
+                    <TextView
+                        android:id="@+id/tvCurrentWave"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="파고 0.2m"
+                        android:textSize="14sp"
+                        android:paddingEnd="12dp"/>
+
+                    <TextView
+                        android:id="@+id/tvCurrentDust"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="미세먼지 좋음"
+                        android:textSize="14sp"/>
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+
+        <!-- ✅ 시간별 날씨 리스트 -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvWeather6h"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:overScrollMode="never"
+            android:nestedScrollingEnabled="false"/>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

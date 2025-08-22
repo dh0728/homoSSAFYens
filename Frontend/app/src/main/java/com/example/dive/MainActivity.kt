@@ -64,6 +64,18 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        if (savedInstanceState == null) {
+            // 기본 Fragment 설정
+//            supportFragmentManager.beginTransaction()
+//                .replace(R.id.fragmentContainer, Tide1dayFragment())
+//                .commit()
+            getCurrentLocationAndCallApi(showFragment = true)
+
+            // 기본 Chip 선택 상태로
+            val chipToday = findViewById<Chip>(R.id.chipTide1)
+            chipToday.isChecked = true
+        }
+
         // 오늘 날짜 표시
         val today = Calendar.getInstance().time
         val sdf = SimpleDateFormat("MM.dd (E)", Locale.KOREAN)
@@ -94,7 +106,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun getCurrentLocationAndCallApi() {
+    private fun getCurrentLocationAndCallApi(showFragment: Boolean = false) {
         // 권한 체크
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
             != PackageManager.PERMISSION_GRANTED &&
@@ -149,6 +161,12 @@ class MainActivity : AppCompatActivity() {
                                 Log.e("API", "요청 실패: ${t.message}")
                             }
                         })
+
+                    // ✅ 위치까지 확보되었으면 fragment 띄우기
+                    if (showFragment) {
+                        replaceFragment(Tide1dayFragment())
+                    }
+
                 } else {
                     Log.e("Location", "location is null")
                 }

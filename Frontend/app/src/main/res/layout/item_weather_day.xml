@@ -2,39 +2,74 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="#F5F5F5"
-    android:padding="8dp"
-    android:layout_marginBottom="8dp">
+    android:background="@android:color/white"
+    android:padding="12dp"
+    android:layout_marginBottom="6dp"
+    android:elevation="2dp">
 
-    <!-- 날짜 행 -->
+    <!-- 상단: 날짜 요약 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
         <TextView
             android:id="@+id/tvDayDate"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="2025-08-17 (일)"
-            android:textSize="16sp"
-            android:textStyle="bold"/>
+            android:text="월 21"
+            android:textStyle="bold"
+            android:textSize="15sp"/>
+
+        <TextView
+            android:id="@+id/tvDaySky"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="☀️"
+            android:textSize="18sp"
+            android:layout_marginEnd="12dp"/>
+
+        <TextView
+            android:id="@+id/tvDayTemp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="33° / 25°"
+            android:textSize="14sp"
+            android:layout_marginEnd="12dp"/>
 
         <TextView
             android:id="@+id/tvToggle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="▼"
-            android:textSize="16sp"
-            android:padding="4dp"/>
+            android:textSize="16sp"/>
     </LinearLayout>
 
-    <!-- 시간별 RecyclerView (처음엔 GONE) -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvDayHours"
+    <!-- 상세 (토글 시) -->
+    <LinearLayout
+        android:id="@+id/layoutDetail"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="vertical"
         android:visibility="gone"
-        android:nestedScrollingEnabled="false"/>
+        android:paddingTop="8dp">
+
+        <!-- 설명 -->
+        <TextView
+            android:id="@+id/tvDayDesc"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="구름 많음, 간간이 비"
+            android:textSize="14sp"
+            android:paddingBottom="6dp"/>
+
+        <!-- 시간별 리스트 -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvDayHours"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:nestedScrollingEnabled="false"/>
+    </LinearLayout>
 </LinearLayout>

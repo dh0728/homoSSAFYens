@@ -2,12 +2,13 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="16dp"
-    android:background="#F9F9F9">
+    android:background="@color/white">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:gravity="center_horizontal">
 
         <!-- 지역 / 시간 -->
         <TextView
@@ -15,16 +16,18 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="측정소"
-            android:textSize="18sp"
-            android:textStyle="bold"/>
+            android:textSize="23sp"
+            android:textStyle="bold"
+            android:gravity="center"/>
 
         <TextView
             android:id="@+id/tvTime"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="2025-08-19 16:00"
-            android:textSize="14sp"
-            android:textColor="@android:color/darker_gray"/>
+            android:textSize="18sp"
+            android:textColor="@android:color/darker_gray"
+            android:gravity="center"/>
 
         <!-- PM10 / PM25 두개 원형 게이지 -->
         <LinearLayout
@@ -32,13 +35,14 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:weightSum="2"
-            android:paddingTop="16dp">
+            android:paddingTop="16dp"
+            android:gravity="center">
 
             <!-- PM10 -->
             <FrameLayout
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
+                android:layout_marginEnd="35dp"
                 android:gravity="center">
 
                 <ProgressBar
@@ -79,9 +83,8 @@
 
             <!-- PM2.5 -->
             <FrameLayout
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
                 android:gravity="center">
 
                 <ProgressBar
@@ -128,13 +131,14 @@
             android:layout_height="wrap_content"
             android:columnCount="2"
             android:rowCount="3"
-            android:layout_marginTop="20dp">
+            android:layout_marginTop="5dp"
+            android:layout_marginStart="15dp">
 
             <TextView
                 android:id="@+id/tvO3"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:paddingTop="10dp"
+                android:paddingTop="5dp"
                 android:layout_columnWeight="1"
                 android:text="오존: 0.063ppm (보통)" />
 
@@ -142,7 +146,7 @@
                 android:id="@+id/tvCO"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:paddingTop="10dp"
+                android:paddingTop="5dp"
                 android:layout_columnWeight="1"
                 android:text="일산화탄소: 0.6ppm (좋음)" />
 

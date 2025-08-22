@@ -43,6 +43,24 @@ class Tide1dayFragment : Fragment() {
         return view
     }
 
+    // "HH:mm:ss" → "HH:mm"
+    private fun formatTime(raw: String): String {
+        return try {
+            raw.substring(0, 5) // "07:19:00" → "07:19"
+        } catch (e: Exception) {
+            raw
+        }
+    }
+
+    // RISING / FALLING → 한글
+    private fun convertType(raw: String): String {
+        return when (raw.uppercase()) {
+            "RISING" -> "만조"
+            "FALLING" -> "간조"
+            else -> raw
+        }
+    }
+
     private fun loadTideData() {
         val lat = arguments?.getDouble("lat") ?: 35.1
         val lon = arguments?.getDouble("lon") ?: 129.0
@@ -53,12 +71,25 @@ class Tide1dayFragment : Fragment() {
                     if (response.isSuccessful) {
                         val data = response.body()?.data ?: return
 
+                        // 1. 날짜/위치/일출일몰
                         tvDate.text = "${data.date} (${data.weekday}) · 음력 ${data.lunar}"
                         tvLocation.text = "${data.locationName} · ${data.mul}"
-                        tvSunMoon.text =
-                            "일출: ${data.sunrise} · 일몰: ${data.sunset}\n월출: ${data.moonrise} · 월몰: ${data.moonset}"
 
-                        adapter.updateEvents(data.events)
+                        // 초 제거 함수 사용
+                        tvSunMoon.text =
+                            "일출: ${formatTime(data.sunrise)} · 일몰: ${formatTime(data.sunset)}\n" +
+                                    "월출: ${formatTime(data.moonrise)} · 월몰: ${formatTime(data.moonset)}"
+
+                        // 2. 이벤트 리스트 업데이트 (시간/상태/색상 변환 포함)
+                        val convertedEvents = data.events.map { event ->
+                            event.copy(
+                                time = formatTime(event.time), // HH:mm:ss → HH:mm
+                                trend = convertType(event.trend), // RISING/FALLING → 만조/간조
+                            )
+                        }
+
+                        adapter.updateEvents(convertedEvents)
+
                     } else {
                         Log.e("Tide1day", "응답 실패: ${response.code()}")
                     }
@@ -70,5 +101,7 @@ class Tide1dayFragment : Fragment() {
                 }
             })
     }
+
+
 
 }
