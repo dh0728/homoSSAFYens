@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.dive"
-        minSdk = 30
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -115,6 +115,7 @@ dependencies {
     implementation("com.google.guava:guava:32.1.3-android")
 
     // LocalBroadcastManager (중요!)
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
 
     // Testing

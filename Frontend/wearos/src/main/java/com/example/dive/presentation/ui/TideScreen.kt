@@ -1,4 +1,3 @@
-
 package com.example.dive.presentation.ui
 
 import androidx.compose.foundation.background
@@ -15,25 +14,42 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.wear.compose.material.Card
 import androidx.wear.compose.material.CircularProgressIndicator
 import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.example.dive.data.model.TideData
 import com.example.dive.data.model.TideEvent
+import com.example.dive.presentation.SyncHint
 import com.example.dive.presentation.TideUiState
-import com.example.dive.presentation.WeatherUiState
 import com.example.dive.presentation.theme.*
 
 @Composable
-fun TideScreen(uiState: TideUiState) {
+fun TideScreen(
+    uiState: TideUiState,
+    syncHint: SyncHint = SyncHint.NONE // 추가: 상단 안내 배지 노출용 (옵션)
+) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         when (uiState) {
             is TideUiState.Loading -> {
-                CircularProgressIndicator()
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    // 안내 배지(옵션)
+                    if (syncHint == SyncHint.PROMPT) {
+                        SyncPromptBadge(
+                            text = "휴대폰에서 앱을 열어 동기화하세요"
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                    CircularProgressIndicator()
+                }
             }
             is TideUiState.Error -> {
                 Text(
@@ -44,10 +60,39 @@ fun TideScreen(uiState: TideUiState) {
                 )
             }
             is TideUiState.Success -> {
-                TideInfoCard(tideData = uiState.tideData)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // 성공 상태에서도 아직 다른 데이터 동기화 중이면 배지 표시 가능
+                    if (syncHint == SyncHint.PROMPT) {
+                        SyncPromptBadge(
+                            text = "휴대폰에서 앱을 열어 동기화하세요"
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+                    TideInfoCard(tideData = uiState.tideData)
+                }
             }
+        }
+    }
+}
 
-            WeatherUiState.Loading -> TODO()
+@Composable
+private fun SyncPromptBadge(text: String) {
+    Card(onClick = { /* no-op */ }, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+        Box(
+            modifier = Modifier.padding(vertical = 6.dp, horizontal = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.caption1,
+                color = TextSecondary,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
@@ -94,11 +139,13 @@ fun TideInfoCard(tideData: TideData) {
 
         Spacer(modifier = Modifier.height(1.dp))
 
-        // 2 x 2 배치 (Row + Column)
+        // 2 x 2 배치
         Column(
             verticalArrangement = Arrangement.spacedBy(4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 0.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 0.dp)
         ) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -106,11 +153,11 @@ fun TideInfoCard(tideData: TideData) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 TideEventCell(
-                    event = tideData.events[0],
+                    event = tideData.events.getOrNull(0) ?: TideEvent("--:--", 0, "만조", 0),
                     modifier = Modifier.weight(0.45f)
                 )
                 TideEventCell(
-                    event = tideData.events[1],
+                    event = tideData.events.getOrNull(1) ?: TideEvent("--:--", 0, "간조", 0),
                     modifier = Modifier.weight(0.45f)
                 )
             }
@@ -120,11 +167,11 @@ fun TideInfoCard(tideData: TideData) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 TideEventCell(
-                    event = tideData.events[2],
+                    event = tideData.events.getOrNull(2) ?: TideEvent("--:--", 0, "만조", 0),
                     modifier = Modifier.weight(0.45f)
                 )
                 TideEventCell(
-                    event = tideData.events[3],
+                    event = tideData.events.getOrNull(3) ?: TideEvent("--:--", 0, "간조", 0),
                     modifier = Modifier.weight(0.45f)
                 )
             }
@@ -159,18 +206,13 @@ fun TideEventCell(event: TideEvent, modifier: Modifier = Modifier) {
         else -> event.trend
     }
 
-    // 🔹 배경은 회색 그대로 유지
     val backgroundColor = BackgroundSecondary.copy(alpha = 0.8f)
-
     val arrowColor = when {
-        event.deltaCm == null -> TextSecondary
-        event.deltaCm >= 0 -> AccentRed
+        (event.deltaCm ?: 0) >= 0 -> AccentRed
         else -> AccentBlue
     }
-
     val arrowIcon = when {
-        event.deltaCm == null -> null
-        event.deltaCm >= 0 -> Icons.Filled.ArrowUpward
+        (event.deltaCm ?: 0) >= 0 -> Icons.Filled.ArrowUpward
         else -> Icons.Filled.ArrowDownward
     }
 
@@ -206,7 +248,7 @@ fun TideEventCell(event: TideEvent, modifier: Modifier = Modifier) {
 
         // 시간
         Text(
-            text = event.time.substring(0, 5),
+            text = (event.time.takeIf { it.length >= 5 } ?: "--:--").substring(0, 5),
             style = MaterialTheme.typography.title3,
             color = TextPrimary
         )
@@ -220,22 +262,16 @@ fun TideEventCell(event: TideEvent, modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.caption1,
                 color = TextSecondary
             )
-
             Spacer(Modifier.width(4.dp))
-
-            if (arrowIcon != null) {
-                Icon(
-                    imageVector = arrowIcon,
-                    contentDescription = trendLabel,
-                    tint = arrowColor,
-                    modifier = Modifier.size(14.dp)
-                )
-                Spacer(Modifier.width(2.dp))
-            }
-            val deltaText = when (val d = event.deltaCm) {
-                null -> ""
-                else -> if (d > 0) "+$d" else "$d"
-            }
+            Icon(
+                imageVector = arrowIcon,
+                contentDescription = trendLabel,
+                tint = arrowColor,
+                modifier = Modifier.size(14.dp)
+            )
+            Spacer(Modifier.width(2.dp))
+            val d = event.deltaCm ?: 0
+            val deltaText = if (d > 0) "+$d" else "$d"
             Text(
                 text = deltaText,
                 style = MaterialTheme.typography.caption1,

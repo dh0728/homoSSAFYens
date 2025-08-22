@@ -1,21 +1,98 @@
 package com.example.dive.service
 
+import android.content.ComponentName
 import android.content.Intent
+import android.util.Log
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import androidx.wear.tiles.TileService
+import androidx.wear.watchface.complications.datasource.ComplicationDataSourceUpdateRequester
+import com.example.dive.data.WatchDataRepository
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.WearableListenerService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 class WatchMessageListenerService : WearableListenerService() {
 
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private lateinit var repo: WatchDataRepository
+
+    private var lastTileUpdateAt = 0L
+    private var lastCompUpdateAt = 0L
+    private val UPDATE_DEBOUNCE_MS = 1200L
+
+    override fun onCreate() {
+        super.onCreate()
+        repo = WatchDataRepository(this)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        scope.cancel()
+    }
+
     override fun onMessageReceived(messageEvent: MessageEvent) {
-        // 폰으로부터 받은 데이터를 브로드캐스트로 전달
-        val intent = Intent(ACTION_MESSAGE_RECEIVED).apply {
-            // Note: At runtime, the system uses the URI's path, which is set by the sender.
-            // We add it to the Intent here just for the receiver's convenience.
-            putExtra(EXTRA_PATH, messageEvent.path)
-            putExtra(EXTRA_DATA, messageEvent.data)
+        val path = messageEvent.path
+        val data = messageEvent.data
+
+        scope.launch {
+            var updateTile = false
+            var updateComp = false
+            try {
+                when (path) {
+                    "/response/tide" -> { repo.saveTideJson(data.decodeToString()); updateTile = true; updateComp = true }
+                    "/response/weather" -> { repo.saveWeather6hJson(data.decodeToString()); updateComp = true }
+                    "/response/7dweather" -> { repo.saveWeather7dJson(data.decodeToString()) }
+                    "/response/locations" -> { repo.saveFishingJson(data.decodeToString()) }
+                    "/response/current_location" -> { repo.saveLocationJson(data.decodeToString()); updateTile = true }
+                }
+            } catch (e: Exception) {
+                Log.e("WatchMsgSvc", "Save to DataStore failed: ${e.message}", e)
+            }
+
+            if (updateTile) safeRequestTileUpdate()
+            if (updateComp) safeRequestComplicationUpdate()
         }
-        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+
+        // 필요 시 유지(문제 발생하면 주석 처리)
+        val intent = Intent(ACTION_MESSAGE_RECEIVED).apply {
+            putExtra(EXTRA_PATH, path)
+            putExtra(EXTRA_DATA, data)
+        }
+        LocalBroadcastManager.getInstance(this@WatchMessageListenerService).sendBroadcast(intent)
+    }
+
+    private fun safeRequestTileUpdate() {
+        val now = System.currentTimeMillis()
+        if (now - lastTileUpdateAt < UPDATE_DEBOUNCE_MS) return
+        lastTileUpdateAt = now
+        try {
+            TileService.getUpdater(this@WatchMessageListenerService)
+                .requestUpdate(com.example.dive.tile.MainTileService::class.java)
+        } catch (e: Exception) {
+            Log.e("WatchMsgSvc", "Tile update request failed: ${e.message}", e)
+        }
+    }
+
+    private fun safeRequestComplicationUpdate() {
+        val now = System.currentTimeMillis()
+        if (now - lastCompUpdateAt < UPDATE_DEBOUNCE_MS) return
+        lastCompUpdateAt = now
+        try {
+            val requester = ComplicationDataSourceUpdateRequester.create(
+                this@WatchMessageListenerService,
+                ComponentName(
+                    this@WatchMessageListenerService,
+                    com.example.dive.complication.MainComplicationService::class.java
+                )
+            )
+            requester.requestUpdateAll()
+        } catch (e: Exception) {
+            Log.e("WatchMsgSvc", "Complication update request failed: ${e.message}", e)
+        }
     }
 
     companion object {

@@ -1,34 +1,41 @@
 package com.example.dive.tile
 
-import android.content.Context
-import android.content.Intent
 import android.util.Log
 import androidx.concurrent.futures.CallbackToFutureAdapter
 import androidx.wear.tiles.ActionBuilders
 import androidx.wear.tiles.ColorBuilders.argb
 import androidx.wear.tiles.DimensionBuilders.dp
 import androidx.wear.tiles.DimensionBuilders.sp
-import androidx.wear.tiles.LayoutElementBuilders.*
-import androidx.wear.tiles.ModifiersBuilders.*
+import androidx.wear.tiles.LayoutElementBuilders.Column
+import androidx.wear.tiles.LayoutElementBuilders.FontStyle
+import androidx.wear.tiles.LayoutElementBuilders.Layout
+import androidx.wear.tiles.LayoutElementBuilders.LayoutElement
+import androidx.wear.tiles.LayoutElementBuilders.Row
+import androidx.wear.tiles.LayoutElementBuilders.Spacer
+import androidx.wear.tiles.LayoutElementBuilders.Text
+import androidx.wear.tiles.LayoutElementBuilders.Box
+import androidx.wear.tiles.ModifiersBuilders.Background
+import androidx.wear.tiles.ModifiersBuilders.Clickable
+import androidx.wear.tiles.ModifiersBuilders.Modifiers
 import androidx.wear.tiles.RequestBuilders
 import androidx.wear.tiles.ResourceBuilders
 import androidx.wear.tiles.TileBuilders
 import androidx.wear.tiles.TileService
 import androidx.wear.tiles.TimelineBuilders
+import com.example.dive.data.HealthRepository
 import com.example.dive.data.WatchDataRepository
 import com.example.dive.data.model.TideData
 import com.example.dive.data.model.TideEvent
 import com.example.dive.health.HeartRateMonitor
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
-import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 
 private const val RESOURCES_VERSION = "1"
 private const val TAG = "MainTileService"
@@ -42,25 +49,6 @@ private object TileColors {
     const val AccentYellow      = 0xFFFFD700.toInt()
 }
 
-/** 타일 전용 로컬 캐시 (가볍게 SharedPreferences 사용) */
-private object TileCache {
-    private const val PREF = "tile_cache"
-    private const val KEY_TIDE = "tide_json"
-    private val gson = Gson()
-
-    fun saveTide(context: Context, data: TideData) {
-        val json = gson.toJson(data)
-        context.getSharedPreferences(PREF, Context.MODE_PRIVATE)
-            .edit().putString(KEY_TIDE, json).apply()
-    }
-
-    fun loadTide(context: Context): TideData? {
-        val json = context.getSharedPreferences(PREF, Context.MODE_PRIVATE)
-            .getString(KEY_TIDE, null) ?: return null
-        return runCatching { gson.fromJson(json, TideData::class.java) }.getOrNull()
-    }
-}
-
 class MainTileService : TileService() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -70,8 +58,11 @@ class MainTileService : TileService() {
     override fun onCreate() {
         super.onCreate()
         repository = WatchDataRepository(this)
-        // Pass a dummy flow for marineActivityModeFlow as it's not relevant for TileService's HR monitoring
-        heartRateMonitor = HeartRateMonitor(this, MutableStateFlow(com.example.dive.presentation.ui.MarineActivityMode.OFF))
+        heartRateMonitor = HeartRateMonitor(
+            this,
+            MutableStateFlow(com.example.dive.presentation.ui.MarineActivityMode.OFF),
+            HealthRepository(this)
+        )
     }
 
     override fun onDestroy() {
@@ -83,49 +74,42 @@ class MainTileService : TileService() {
         requestParams: RequestBuilders.TileRequest
     ): ListenableFuture<TileBuilders.Tile> {
         return CallbackToFutureAdapter.getFuture { completer: CallbackToFutureAdapter.Completer<TileBuilders.Tile> ->
-            val cached = TileCache.loadTide(this@MainTileService)
-            val initial = cached ?: TideData(
-                date = "",
-                weekday = "",
-                locationName = "로딩중",
-                mul = "",
-                lunar = "",
-                sunrise = "",
-                sunset = "",
-                moonrise = "",
-                moonset = "",
-                events = fallbackEvents()
-            )
-
-            // Get latest heart rate value
-            val currentHeartRate = heartRateMonitor.latestHeartRate.value
-
-            val initialContent = wrapClickable(
-                layout(
-                    locationName = initial.locationName,
-                    mul         = initial.mul,
-                    events      = initial.events,
-                    currentHeartRate = currentHeartRate
-                )
-            )
-            completer.set(buildTile(initialContent))
-
-            // 백그라운드에서 최신 데이터로 갱신 → 캐시 저장 → 타일 업데이트 요청
             val job = serviceScope.launch {
                 try {
-                    val latest = repository.getTideData().firstOrNull()?.data
-                    if (latest != null) {
-                        TileCache.saveTide(this@MainTileService, latest)
-                        requestTileUpdate() // 다음 프레임에서 최신으로
-                    } else {
-                        Log.w(TAG, "Latest tide data is null; keeping cached tile.")
-                    }
+                    val ds = repository.getTideData().firstOrNull()
+                    val tide = ds?.data ?: placeholderTide()
+                    val currentHeartRate = heartRateMonitor.latestHeartRate.value
+
+                    val content = wrapClickable(
+                        layout(
+                            locationName = tide.locationName,
+                            mul = tide.mul,
+                            events = tide.events,
+                            currentHeartRate = currentHeartRate
+                        )
+                    )
+                    completer.set(buildTile(content))
+
+                    // 최신 데이터 요청(지연 재요청은 서비스 트리거에 맡김)
+                    runCatching { repository.requestDataFromServer("/request/refresh_all_data") }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Fetch latest tide failed", e)
+                    Log.e(TAG, "Tile build error", e)
+                    val fallback = Text.Builder().setText("데이터 없음").build()
+                    val entry = TimelineBuilders.TimelineEntry.Builder()
+                        .setLayout(Layout.Builder().setRoot(fallback).build())
+                        .build()
+                    val timeline = TimelineBuilders.Timeline.Builder()
+                        .addTimelineEntry(entry)
+                        .build()
+                    val tile = TileBuilders.Tile.Builder()
+                        .setResourcesVersion(RESOURCES_VERSION)
+                        .setTimeline(timeline)
+                        .build()
+                    completer.set(tile)
                 }
             }
             completer.addCancellationListener({ job.cancel() }, MoreExecutors.directExecutor())
-            "tile-request-cached"
+            "tile-request"
         }
     }
 
@@ -141,12 +125,6 @@ class MainTileService : TileService() {
         }
     }
 
-    /** 타일 리프레시 트리거 */
-    private fun requestTileUpdate() {
-        TileService.getUpdater(this).requestUpdate(MainTileService::class.java)
-    }
-
-    /** 타일 공통 빌드 */
     private fun buildTile(content: LayoutElement): TileBuilders.Tile {
         val entry = TimelineBuilders.TimelineEntry.Builder()
             .setLayout(Layout.Builder().setRoot(content).build())
@@ -160,7 +138,6 @@ class MainTileService : TileService() {
             .build()
     }
 
-    /** 전체 탭 → 앱 메인으로 이동 */
     private fun wrapClickable(child: LayoutElement): LayoutElement {
         val launch = ActionBuilders.LaunchAction.Builder()
             .setAndroidActivity(
@@ -170,6 +147,7 @@ class MainTileService : TileService() {
                     .build()
             )
             .build()
+
         return Column.Builder()
             .setModifiers(
                 Modifiers.Builder()
@@ -190,7 +168,6 @@ class MainTileService : TileService() {
             .build()
     }
 
-    /** 메인 레이아웃 */
     private fun layout(
         locationName: String,
         mul: String,
@@ -220,7 +197,9 @@ class MainTileService : TileService() {
                     .setModifiers(
                         Modifiers.Builder()
                             .setBackground(
-                                Background.Builder().setColor(argb(TileColors.AccentYellow)).build()
+                                Background.Builder()
+                                    .setColor(argb(TileColors.AccentYellow))
+                                    .build()
                             )
                             .build()
                     )
@@ -245,12 +224,15 @@ class MainTileService : TileService() {
             .setHeight(dp(56f))
             .setModifiers(
                 Modifiers.Builder()
-                    .setBackground(Background.Builder().setColor(argb(0x33FFFFFF.toInt())).build())
+                    .setBackground(
+                        Background.Builder()
+                            .setColor(argb(0x33FFFFFF.toInt()))
+                            .build()
+                    )
                     .build()
             )
             .build()
 
-        // Heart Rate Section - 앱 실행으로 변경
         val heartRateSection = Row.Builder()
             .addContent(
                 Text.Builder()
@@ -399,10 +381,22 @@ class MainTileService : TileService() {
         return (a shl 24) or (colorInt and 0x00FFFFFF)
     }
 
-    private fun fallbackEvents(): List<TideEvent> = listOf(
-        TideEvent(trend = "만조", time = "--:--", levelCm = 0, deltaCm = 0),
-        TideEvent(trend = "간조", time = "--:--", levelCm = 0, deltaCm = 0),
-        TideEvent(trend = "만조", time = "--:--", levelCm = 0, deltaCm = 0),
-        TideEvent(trend = "간조", time = "--:--", levelCm = 0, deltaCm = 0),
-    )
+    private fun placeholderTide(): TideData =
+        TideData(
+            date = "",
+            weekday = "",
+            locationName = "로딩중",
+            mul = "",
+            lunar = "",
+            sunrise = "",
+            sunset = "",
+            moonrise = "",
+            moonset = "",
+            events = listOf(
+                TideEvent(trend = "만조", time = "--:--", levelCm = 0, deltaCm = 0),
+                TideEvent(trend = "간조", time = "--:--", levelCm = 0, deltaCm = 0),
+                TideEvent(trend = "만조", time = "--:--", levelCm = 0, deltaCm = 0),
+                TideEvent(trend = "간조", time = "--:--", levelCm = 0, deltaCm = 0),
+            )
+        )
 }
