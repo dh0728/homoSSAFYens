@@ -2,6 +2,8 @@ package com.example.dive.data.api
 
 import FineDustResponse
 import com.example.dive.data.model.FishingResponse
+import com.example.dive.data.model.LocateReq
+import com.example.dive.data.model.RegisterReq
 import com.example.dive.data.model.TempResponse
 import com.example.dive.data.model.TideResponse
 import com.example.dive.data.model.TideWeeklyResponse
@@ -61,4 +63,11 @@ interface ApiService {
         @Query("lat") lat: Double,
         @Query("lon") lon: Double
     ): Call<FineDustResponse>
+
+    @POST("/api/v1/device/register")
+    fun register(@Body body: RegisterReq): Call<Unit>
+
+    @POST("/api/v1/device/locate")
+    fun locate(@Body body: LocateReq): Call<Unit>
+
 }
