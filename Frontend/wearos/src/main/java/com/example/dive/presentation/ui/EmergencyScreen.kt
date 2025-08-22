@@ -85,9 +85,8 @@ fun EmergencyInfoCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(BackgroundSecondary)
-                .padding(horizontal = 12.dp, vertical = 6.dp),
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .clip(RoundedCornerShape(12.dp)),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -95,14 +94,6 @@ fun EmergencyInfoCard(
             Spacer(Modifier.width(8.dp))
             Text("SOS", style = MaterialTheme.typography.title1, color = AccentRed)
         }
-
-        Text(
-            text = locationStatus,
-            style = MaterialTheme.typography.body2,
-            color = TextSecondary,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-        )
 
         Card(
             onClick = {
