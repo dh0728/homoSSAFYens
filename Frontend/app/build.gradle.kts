@@ -56,6 +56,8 @@ dependencies {
     implementation("androidx.fragment:fragment-ktx:1.6.2")
     implementation(libs.androidx.fragment)
 
+
+
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation(libs.androidx.espresso.core.new)
@@ -79,5 +81,7 @@ dependencies {
 
     // 3) (선택) 코루틴 — onNewToken 등에서 IO 작업 편하게 쓸 때
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+
+    implementation("com.google.android.gms:play-services-wearable:19.0.0")
 
 }

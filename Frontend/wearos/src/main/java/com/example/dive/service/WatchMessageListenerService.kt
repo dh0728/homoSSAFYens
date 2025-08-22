@@ -7,6 +7,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.wear.tiles.TileService
 import androidx.wear.watchface.complications.datasource.ComplicationDataSourceUpdateRequester
 import com.example.dive.data.WatchDataRepository
+import com.example.dive.notify.WearNotif
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.WearableListenerService
 import kotlinx.coroutines.CoroutineScope
@@ -14,6 +15,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import org.json.JSONObject
+import java.nio.charset.StandardCharsets
 
 class WatchMessageListenerService : WearableListenerService() {
 
@@ -34,6 +37,8 @@ class WatchMessageListenerService : WearableListenerService() {
         scope.cancel()
     }
 
+
+
     override fun onMessageReceived(messageEvent: MessageEvent) {
         val path = messageEvent.path
         val data = messageEvent.data
@@ -43,6 +48,29 @@ class WatchMessageListenerService : WearableListenerService() {
             var updateComp = false
             try {
                 when (path) {
+                    // ✅ 폰 → 워치 임시 테스트 경로 (문자열 payload)
+                    // sendMessage(..., "/tide/test", "bridge-check".bytes)
+                    "/tide/test" -> {
+                        val payload = String(data, StandardCharsets.UTF_8)
+                        WearNotif.show(
+                            ctx = this@WatchMessageListenerService,
+                            title = "브릿지 테스트",
+                            body  = if (payload.isNotBlank()) payload else "폰에서 이벤트 수신!",
+                            id    = 9999
+                        )
+                    }
+
+                    // ✅ [신규] 폰에서 워치 알림만 즉시 띄우고 싶을 때 쓰는 전용 경로
+                    //    sendMessage(..., "/alert/tide", {"title":"...","body":"...","id":123} as bytes)
+                    "/alert/tide" -> {
+                        val json = String(data, StandardCharsets.UTF_8)
+                        val obj = JSONObject(json)
+                        val title = obj.optString("title", "만조 알림")
+                        val body  = obj.optString("body",  "만조 임박")
+                        val id    = obj.optInt("id", (System.currentTimeMillis() % 100000).toInt())
+                        WearNotif.show(this@WatchMessageListenerService, title, body, id)
+                    }
+
                     "/response/tide" -> { repo.saveTideJson(data.decodeToString()); updateTile = true; updateComp = true }
                     "/response/weather" -> { repo.saveWeather6hJson(data.decodeToString()); updateComp = true }
                     "/response/7dweather" -> { repo.saveWeather7dJson(data.decodeToString()) }
