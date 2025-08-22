@@ -2,6 +2,8 @@
 
 package com.example.dive.presentation
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
@@ -20,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
 import androidx.wear.compose.material.*
 import com.example.dive.emergency.EmergencyManager
 import com.example.dive.presentation.theme.DiveTheme
@@ -31,10 +34,6 @@ import com.example.dive.presentation.ui.TideScreen
 import com.example.dive.presentation.ui.WeatherScreen
 import java.text.SimpleDateFormat
 import java.util.Locale
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.core.app.ActivityCompat
-import androidx.lifecycle.viewmodel.compose.viewModel
 
 class MainActivity : ComponentActivity() {
 
@@ -52,20 +51,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val activityViewModel = this@MainActivity.viewModel
             DiveTheme {
-                val tideUiState by viewModel.tideUiState.collectAsState()
-                val weatherUiState by viewModel.weatherUiState.collectAsState()
-                val detailedWeatherUiState by viewModel.detailedWeatherUiState.collectAsState()
-                val fishingPointsUiState by viewModel.fishingPointsUiState.collectAsState()
-                val emergencyUiState by viewModel.emergencyUiState.collectAsState()
-
-                MainApp(
-                    tideUiState = tideUiState,
-                    weatherUiState = weatherUiState,
-                    detailedWeatherUiState = detailedWeatherUiState,
-                    fishingPointsUiState = fishingPointsUiState,
-                    emergencyUiState = emergencyUiState,
-                    activityViewModel = activityViewModel
-                )
+                MainApp(viewModel = activityViewModel)
             }
         }
     }
@@ -95,7 +81,6 @@ class MainActivity : ComponentActivity() {
                 // Permission granted
             } else {
                 // Permission denied
-                // You might want to show a message to the user or disable functionality
             }
         }
     }
@@ -119,7 +104,6 @@ class MainActivity : ComponentActivity() {
                 EmergencyManager.triggerEmergencySOS(this, "크라운 3회 누름")
                 crownPressCount = 0
             }
-            // Return true to indicate we've handled the event
             return true
         }
         return super.onKeyDown(keyCode, event)
@@ -128,16 +112,17 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainApp(
-    tideUiState: TideUiState,
-    weatherUiState: WeatherUiState,
-    detailedWeatherUiState: DetailedWeatherUiState,
-    fishingPointsUiState: FishingPointsUiState,
-    emergencyUiState: EmergencyUiState,
-    activityViewModel: MainViewModel
+    viewModel: MainViewModel
 ) {
-    val pagerState = rememberPagerState(pageCount = { 6 })
+    val tideUiState by viewModel.tideUiState.collectAsState()
+    val weatherUiState by viewModel.weatherUiState.collectAsState()
+    val detailedWeatherUiState by viewModel.detailedWeatherUiState.collectAsState()
+    val fishingPointsUiState by viewModel.fishingPointsUiState.collectAsState()
+    val emergencyUiState by viewModel.emergencyUiState.collectAsState()
 
-    // TimeSource for Korean AM/PM
+    // 🔹 뒤로가기를 위해 ViewModel에 저장된 페이지에서 시작하도록 수정
+    val pagerState = rememberPagerState(initialPage = viewModel.lastPagerPage, pageCount = { 6 })
+
     val timeSource = object : TimeSource {
         override val currentTime: String
             @Composable
@@ -166,8 +151,8 @@ fun MainApp(
                     0 -> TideScreen(uiState = tideUiState)
                     1 -> WeatherScreen(uiState = weatherUiState)
                     2 -> DetailedWeatherScreen(uiState = detailedWeatherUiState)
-                    3 -> FishingPointsScreen(uiState = fishingPointsUiState)
-                    4 -> EmergencyScreen(viewModel = activityViewModel)
+                    3 -> FishingPointsScreen(uiState = fishingPointsUiState, viewModel = viewModel, pagerState = pagerState)
+                    4 -> EmergencyScreen(viewModel = viewModel)
                     5 -> SettingsScreen()
                 }
             }

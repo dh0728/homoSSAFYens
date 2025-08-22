@@ -17,18 +17,33 @@ import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.Wearable
 import com.google.android.gms.wearable.WearableListenerService
 import com.google.gson.Gson
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.io.IOException
 
 class PhoneWearableService : WearableListenerService() {
 
     private val gson = Gson()
     private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private val okHttpClient = OkHttpClient()
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {
-        super.onCreate()
+        super.onCreate() 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        serviceScope.cancel()
     }
 
     // 캐시 유틸
@@ -84,12 +99,59 @@ class PhoneWearableService : WearableListenerService() {
             "/request/refresh_all_data" -> {
                 requestRefresh(nodeId)
             }
+            "/request/map_for_point" -> {
+                handleMapRequest(nodeId, messageEvent.data)
+            }
             "/emergency/sos" -> {
                 val reason = String(messageEvent.data)
                 handleSosTrigger(reason)
             }
             else -> Unit
         }
+    }
+
+    private fun handleMapRequest(nodeId: String, data: ByteArray) {
+        serviceScope.launch {
+            try {
+                val detail = gson.fromJson(data.decodeToString(), FishingPointDetail::class.java)
+                val url = createStaticMapUrl(detail)
+                Log.d(TAG, "Fetching map from URL: $url")
+
+                val request = Request.Builder().url(url).build()
+                okHttpClient.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) throw IOException("Unexpected code $response")
+
+                    val imageBytes = response.body?.bytes()
+                    if (imageBytes != null) {
+                        sendMessageToWatch("/response/map_image", imageBytes, nodeId)
+                    } else {
+                        Log.e(TAG, "Map image response body is null")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to handle map request", e)
+            }
+        }
+    }
+
+    private fun createStaticMapUrl(detail: FishingPointDetail): String {
+        val point = detail.point
+        val phoneLoc = detail.phoneLocation
+
+        val baseUrl = "https://static-map.openstreetmap.de/staticmap.php"
+        val zoom = "14"
+        val size = "360x240"
+
+        val pointMarker = "markers=${point.lat},${point.lon},red-pushpin"
+        val phoneMarker = phoneLoc?.let {
+            if (it.latitude != 0.0 && it.longitude != 0.0) {
+                "|${it.latitude},${it.longitude},blue-dot"
+            } else ""
+        } ?: ""
+
+        val center = "center=${point.lat},${point.lon}"
+
+        return "$baseUrl?$center&zoom=$zoom&size=$size&$pointMarker$phoneMarker"
     }
 
     // 위치 확보: lastLocation → 실패 시 getCurrentLocation → 그래도 실패면 좌표 캐시 사용
