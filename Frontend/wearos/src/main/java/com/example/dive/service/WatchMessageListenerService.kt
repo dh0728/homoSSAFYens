@@ -43,11 +43,26 @@ class WatchMessageListenerService : WearableListenerService() {
             var updateComp = false
             try {
                 when (path) {
-                    "/response/tide" -> { repo.saveTideJson(data.decodeToString()); updateTile = true; updateComp = true }
-                    "/response/weather" -> { repo.saveWeather6hJson(data.decodeToString()); updateComp = true }
-                    "/response/7dweather" -> { repo.saveWeather7dJson(data.decodeToString()) }
-                    "/response/locations" -> { repo.saveFishingJson(data.decodeToString()) }
-                    "/response/current_location" -> { repo.saveLocationJson(data.decodeToString()); updateTile = true }
+                    "/response/tide" -> {
+                        repo.saveTideJson(data.decodeToString()); updateTile = true; updateComp =
+                            true
+                    }
+
+                    "/response/weather" -> {
+                        repo.saveWeather6hJson(data.decodeToString()); updateComp = true
+                    }
+
+                    "/response/7dweather" -> {
+                        repo.saveWeather7dJson(data.decodeToString())
+                    }
+
+                    "/response/locations" -> {
+                        repo.saveFishingJson(data.decodeToString())
+                    }
+
+                    "/response/current_location" -> {
+                        repo.saveLocationJson(data.decodeToString()); updateTile = true
+                    }
                 }
             } catch (e: Exception) {
                 Log.e("WatchMsgSvc", "Save to DataStore failed: ${e.message}", e)

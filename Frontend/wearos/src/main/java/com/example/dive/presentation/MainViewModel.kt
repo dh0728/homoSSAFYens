@@ -2,6 +2,8 @@ package com.example.dive.presentation
 
 import android.app.Application
 import android.content.SharedPreferences
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,19 +15,19 @@ import com.example.dive.health.HeartRateMonitor
 import com.example.dive.presentation.ui.MarineActivityMode
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.scan
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+// 낚시 포인트 탭의 내부 UI 모드 정의
+sealed interface FishingPointsUiMode {
+    object List : FishingPointsUiMode
+    data class PointDetail(val point: FishingPoint) : FishingPointsUiMode
+    data class RegionInfo(val info: FishingInfo) : FishingPointsUiMode
+    data class MapView(val detail: FishingPointDetail) : FishingPointsUiMode
+}
 
 // Tide UI 상태
 sealed interface TideUiState {
@@ -81,7 +83,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val sharedPreferences: SharedPreferences =
         PreferenceManager.getDefaultSharedPreferences(application)
 
-    // UI States ...
+    // --- 기존 UI States ---
     private val _tideUiState = MutableStateFlow<TideUiState>(TideUiState.Loading)
     val tideUiState: StateFlow<TideUiState> = _tideUiState.asStateFlow()
     private val _weatherUiState = MutableStateFlow<WeatherUiState>(WeatherUiState.Loading)
@@ -94,6 +96,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val emergencyUiState: StateFlow<EmergencyUiState> = _emergencyUiState.asStateFlow()
     private val _syncHintState = MutableStateFlow(SyncHint.NONE)
     val syncHintState: StateFlow<SyncHint> = _syncHintState.asStateFlow()
+
+    // --- 신규/수정된 상태 ---
+    private val _fishingPointsUiMode = MutableStateFlow<FishingPointsUiMode>(FishingPointsUiMode.List)
+    val fishingPointsUiMode: StateFlow<FishingPointsUiMode> = _fishingPointsUiMode.asStateFlow()
+    var lastPagerPage: Int = 0 // 낚시 포인트 탭의 기본 페이지 인덱스
+        private set
+
+    private val _phoneLocation = MutableStateFlow<LocationData?>(null)
 
     // Preferences-backed states
     private val _selectedMarineActivityMode: MutableStateFlow<MarineActivityMode> by lazy {
@@ -175,6 +185,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             repo.getLocationData()
                 .catch { /* keep fallback */ }
                 .collect { locationResponse ->
+                    _phoneLocation.value = locationResponse.data // 위치 정보 별도 저장
+
                     val lat = locationResponse.data.latitude
                     val lon = locationResponse.data.longitude
                     val locationStatus = if (!(lat == 0.0 && lon == 0.0)) {
@@ -199,6 +211,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
         }
 
+        
+
         // 초기 및 폴링 요청
         viewModelScope.launch { safeRequestRefresh("initial") }
         viewModelScope.launch {
@@ -220,6 +234,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 startPollingRefresh()
             }
         }
+    }
+
+    // --- 신규 화면 전환 함수 ---
+    fun showPointDetail(point: FishingPoint, fromPage: Int) {
+        lastPagerPage = fromPage
+        _fishingPointsUiMode.value = FishingPointsUiMode.PointDetail(point)
+    }
+
+    fun showRegionInfo(fromPage: Int) {
+        val currentData = (fishingPointsUiState.value as? FishingPointsUiState.Success)?.fishingData
+        if (currentData != null) {
+            lastPagerPage = fromPage
+            _fishingPointsUiMode.value = FishingPointsUiMode.RegionInfo(currentData.info)
+        }
+    }
+
+    fun showMap(point: FishingPoint, fromPage: Int) {
+        lastPagerPage = fromPage
+        val detail = FishingPointDetail(point = point, phoneLocation = _phoneLocation.value)
+        _fishingPointsUiMode.value = FishingPointsUiMode.MapView(detail)
+        
+    }
+
+    fun returnToList() {
+        _fishingPointsUiMode.value = FishingPointsUiMode.List
     }
 
     private suspend fun waitAnyDataArrived(timeoutMs: Long): Boolean {
