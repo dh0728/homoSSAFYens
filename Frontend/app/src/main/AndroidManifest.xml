@@ -13,9 +13,13 @@
     <uses-permission android:name="android.permission.SEND_SMS"/>
     <uses-permission android:name="android.permission.CALL_PHONE"/>
 
-
+    <!-- 🔹 추가 권한: 백그라운드 위치 / 부팅 후 재등록 -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
     <application
+        android:name=".MyApp"
+        android:usesCleartextTraffic="true"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -47,6 +51,33 @@
         <meta-data
             android:name="com.google.android.wearable.capabilities"
             android:resource="@xml/wear" />
+
+
+        <!-- 🔹 추가: FCM 데이터 수신 서비스 -->
+        <service
+            android:name=".service.AppFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT"/>
+            </intent-filter>
+        </service>
+
+        <!-- 🔹 추가: 위치 브로드캐스트 리시버
+             FusedLocationProviderClient.requestLocationUpdates(..., PendingIntent) 타겟 -->
+        <receiver
+            android:name=".location.LocationUpdateReceiver"
+            android:exported="false" />
+
+        <!-- 🔹 추가: 부팅/시간 변경 시 위치 재등록 및 초기화 -->
+        <receiver
+            android:name=".boot.BootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.TIME_SET"/>
+                <action android:name="android.intent.action.TIMEZONE_CHANGED"/>
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

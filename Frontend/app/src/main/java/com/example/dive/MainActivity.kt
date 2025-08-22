@@ -1,6 +1,7 @@
 package com.example.dive
 
 import android.Manifest
+import android.content.Context
 import android.os.Build
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -15,6 +16,9 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
 import com.example.dive.data.api.RetrofitClient
 import com.example.dive.data.model.TideResponse
+import com.example.dive.location.LocationRegistrar
+import com.example.dive.service.AppFirebaseMessagingService
+import com.example.dive.work.LocateWorker
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
@@ -25,6 +29,10 @@ import retrofit2.Callback
 import retrofit2.Response
 import java.text.SimpleDateFormat
 import java.util.*
+
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 
 class MainActivity : AppCompatActivity() {
 
@@ -37,9 +45,34 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        //fcm 토큰발급
+        AppFirebaseMessagingService.initAndRegisterOnce(this)
+
+        // (기존) 현재 기기 서버에 등록
+        LocationRegistrar.register(this)
+
+        // (교체) 위치 권한 있을 때만 안전하게 등록
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            try {
+                LocationRegistrar.register(this)
+            } catch (_: SecurityException) { /* 권한 타이밍 이슈 방어 */ }
+        }
+
         Log.d("MainActivity", "앱 실행됨!")
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
+
+        Log.d("MainActivity", "채널 상태 확인!")
+        dumpNotificationState(this);
+
+        // ✅ Android 13+ 알림 권한 요청 (한 번만)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val perm = android.Manifest.permission.POST_NOTIFICATIONS
+            if (checkSelfPermission(perm) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(perm), 1001)
+            }
+        }
 
         tvNearestSub = findViewById(R.id.tvNearestSub)
         tvDate = findViewById(R.id.tvDate)
@@ -85,24 +118,56 @@ class MainActivity : AppCompatActivity() {
         getCurrentLocationAndCallApi()
 
         // 알림 권한 요청 (Android 13 이상)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ActivityCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                    102
-                )
-            }
-        }
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+//            if (ActivityCompat.checkSelfPermission(
+//                    this,
+//                    Manifest.permission.POST_NOTIFICATIONS
+//                ) != PackageManager.PERMISSION_GRANTED
+//            ) {
+//                ActivityCompat.requestPermissions(
+//                    this,
+//                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+//                    102
+//                )
+//            }
+//        }
+
+        // ✅ 워치 브릿지 로컬 테스트 (원하면 임시 버튼으로 호출)
+         AppFirebaseMessagingService.showLocalNotification(
+             ctx = this,
+             title = "워치 브릿지 테스트",
+             body = "이 알림이 워치에도 보이면 성공!",
+             notificationId = 4242,
+             evtId = "bridge-check"
+         )
+
+
+
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
+        }
+    }
+
+    /** 알림 상태/채널 상태 로그 출력 */
+    private fun dumpNotificationState(ctx: Context) {
+        val nm = androidx.core.app.NotificationManagerCompat.from(ctx)
+        val areEnabled = nm.areNotificationsEnabled()
+        android.util.Log.w("NOTI", "app notifications enabled=$areEnabled")
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val sys = ctx.getSystemService(android.app.NotificationManager::class.java)
+            val ch = sys.getNotificationChannel(com.example.dive.notify.Notif.CH_TIDE)
+            if (ch == null) {
+                android.util.Log.w("NOTI", "channel tide_alerts = NULL")
+            } else {
+                android.util.Log.w(
+                    "NOTI",
+                    "channel importance=${ch.importance}, sound=${ch.sound}, vibration=${ch.vibrationPattern!=null}"
+                )
+            }
         }
     }
 
@@ -134,6 +199,16 @@ class MainActivity : AppCompatActivity() {
                     val lon = location.longitude
                     lastLat = lat
                     lastLon = lon
+
+                    // 기존 코드 안의 위치 성공 블록에 ▼ 아래 6줄 추가 - 최초 1
+                    val w = OneTimeWorkRequestBuilder<LocateWorker>()
+                        .setInputData(workDataOf(
+                            "lat" to lat,
+                            "lon" to lon,
+                            "ts" to (System.currentTimeMillis()/1000L)
+                        ))
+                        .build()
+                    WorkManager.getInstance(this).enqueue(w)
 
                     Log.d("Location", "lat=$lat, lon=$lon")
 
@@ -207,6 +282,27 @@ class MainActivity : AppCompatActivity() {
             }
             if (allPermissionsGranted) {
                 getCurrentLocationAndCallApi()
+
+                // ✅ 위치 권한 막 허용된 경우, 이제 안전하게 등록
+                try {
+                    LocationRegistrar.register(this)
+                } catch (_: SecurityException) {}
+
+                // ✅ 안드10+면 백그라운드 위치 권한 추가 요청
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    val hasBg = ActivityCompat.checkSelfPermission(
+                        this, Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+                    if (!hasBg) {
+                        ActivityCompat.requestPermissions(
+                            this,
+                            arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
+                            103
+                        )
+                    }
+                }
+
+
             } else {
                 // Handle case where not all permissions are granted
                 Log.e("MainActivity", "Not all permissions granted.")
@@ -217,6 +313,10 @@ class MainActivity : AppCompatActivity() {
             } else {
                 Log.e("MainActivity", "Notification permission denied.")
             }
+        } else if (requestCode == 103) {
+            // 배경 위치 허용/거부 결과 로그 정도만
+            val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
+            Log.d("MainActivity", "Background location permission = $granted")
         }
     }
 }

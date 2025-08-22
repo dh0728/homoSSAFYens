@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -68,5 +69,15 @@ dependencies {
     // OkHttp (네트워크 통신)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    // 1) Firebase (FCM) — BoM + Messaging
+    implementation(platform("com.google.firebase:firebase-bom:33.2.0"))
+    implementation("com.google.firebase:firebase-messaging-ktx")
+
+    // 2) WorkManager (백그라운드에서 /locate 전송)
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+    // 3) (선택) 코루틴 — onNewToken 등에서 IO 작업 편하게 쓸 때
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
 }
