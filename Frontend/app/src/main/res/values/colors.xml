@@ -5,6 +5,6 @@
     <color name="ocean_deep">#0B3D91</color>     <!-- 깊은 푸른색 -->
     <color name="ocean_blue">#1275FF</color>     <!-- 메인 블루 -->
     <color name="ocean_teal">#00B8D4</color>     <!-- 포인트 -->
-    <color name="ic_launcher_background">#000000</color>
+    <color name="ic_launcher_background">#082A42</color>
     <color name="ocean_wave">#4FC3F7</color>     <!-- 연한 물빛 -->
 </resources>

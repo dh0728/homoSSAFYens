@@ -144,7 +144,7 @@ fun HourlyWeatherRow(hour: com.example.dive.data.model.WeatherHour) {
         val hourString = SimpleDateFormat("a h시", Locale.KOREA).format(date)
 
         Text(text = hourString, style = MaterialTheme.typography.body2, color = TextPrimary, modifier = Modifier.width(50.dp), textAlign = TextAlign.Center)
-        Text(text = getWeatherEmojiFromSky(hour.sky), style = MaterialTheme.typography.body2, color = TextPrimary,modifier = Modifier.width(30.dp), textAlign = TextAlign.Center)
+        Text(text = getWeatherEmojiFromSky(hour.skyCode), style = MaterialTheme.typography.body2, color = TextPrimary,modifier = Modifier.width(30.dp), textAlign = TextAlign.Center)
         Text(text = "${hour.temp.toInt()}°", style = MaterialTheme.typography.body2, color = TextPrimary, modifier = Modifier.width(30.dp), textAlign = TextAlign.Center)
         Text(text = "${hour.rainAmt.toInt()}mm", style = MaterialTheme.typography.body2, color = TextPrimary, modifier = Modifier.width(40.dp), textAlign = TextAlign.Center)
     }

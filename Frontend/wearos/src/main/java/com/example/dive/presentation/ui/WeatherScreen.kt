@@ -108,7 +108,7 @@ fun WeatherInfoCard(weatherData: Weather6hData) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = getWeatherEmojiFromSky(currentWeather.sky),
+                        text = getWeatherEmojiFromSky(currentWeather.skyCode),
                         style = MaterialTheme.typography.display2,
                         modifier = Modifier.padding(end = 6.dp)
                     )
@@ -210,7 +210,7 @@ fun WeatherInfoCard(weatherData: Weather6hData) {
                             val hourString = SimpleDateFormat("a h시", Locale.KOREA).format(date)
 
                             Text(hourString, style = MaterialTheme.typography.body2, color = TextPrimary, modifier = Modifier.width(50.dp), textAlign = TextAlign.Center)
-                            Text(getWeatherEmojiFromSky(hourlyWeather.sky), style = MaterialTheme.typography.body2, color = TextPrimary, modifier = Modifier.width(35.dp), textAlign = TextAlign.Center)
+                            Text(getWeatherEmojiFromSky(hourlyWeather.skyCode), style = MaterialTheme.typography.body2, color = TextPrimary, modifier = Modifier.width(35.dp), textAlign = TextAlign.Center)
                             Text("${hourlyWeather.tempC.toInt()}°", style = MaterialTheme.typography.body2, color = TextPrimary, modifier = Modifier.width(35.dp), textAlign = TextAlign.Center)
                             Text("${hourlyWeather.rainMm.toInt()}mm", style = MaterialTheme.typography.body2, color = TextPrimary, modifier = Modifier.width(50.dp), textAlign = TextAlign.Center)
                         }
@@ -231,15 +231,30 @@ fun String?.toDisplayString(suffix: String = ""): String {
     return if (value == null || value.isNaN()) "- $suffix" else "$value$suffix"
 }
 
-fun getWeatherEmojiFromSky(sky: String): String {
+fun getWeatherEmojiFromSky(skyCode: String): String {
     return when {
-        sky.contains("맑음") -> "☀️"
-        sky.contains("구름많음") -> "☁️"
-        sky.contains("구름조금") -> "🌤️"
-        sky.contains("흐림") -> "☁️"
-        sky.contains("비/눈") -> "🌧️"
-        sky.contains("비") -> "🌧️"
-        sky.contains("눈") -> "🌨️"
-        else -> "❔"
+        skyCode == "1"  -> "☀️"   // 맑음
+        skyCode == "2"  -> "🌤️"  // 구름조금
+        skyCode == "3"  -> "☁️"   // 흐림
+        skyCode == "4"  -> "🌧️"  // 비
+        skyCode == "5"  -> "🌨️"  // 눈
+        skyCode == "6"  -> "🌨️🌧️" // 눈비
+        skyCode == "7"  -> "🌦️"  // 소나기
+        skyCode == "8"  -> "🌦️🌨️" // 소낙눈
+        skyCode == "9"  -> "🌫️"  // 안개
+        skyCode == "10" -> "⛈️"  // 뇌우
+        skyCode == "11" -> "🌥️"  // 차차 흐려짐
+        skyCode == "12" -> "☁️🌩️️" // 흐려져 뇌우
+        skyCode == "13" -> "☁️🌧️️" // 흐려져 비
+        skyCode == "14" -> "☁️🌨️️" // 흐려져 눈
+        skyCode == "15" -> "🌧️🌨️️" // 흐려져 눈비
+        skyCode == "16" -> "⛅☀️"   // 흐린 후 갬
+        skyCode == "17" -> "⛈️☀️"  // 뇌우 후 갬
+        skyCode == "18" -> "🌧️☀️"  // 비 후 갬
+        skyCode == "19" -> "🌨️☀️"  // 눈 후 갬
+        skyCode == "20" -> "🌨️🌧️" // 눈비 후 갬
+        skyCode == "21" -> "☁️"   // 구름많음
+        skyCode == "22" -> "🌫️"  // 황사
+        else -> "❔"   // 알 수 없음
     }
 }

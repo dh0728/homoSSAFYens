@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
+import android.app.PendingIntent
 import android.location.Location
 import android.telephony.SmsManager
 import android.util.Log
@@ -105,6 +107,17 @@ class PhoneWearableService : WearableListenerService() {
             "/emergency/sos" -> {
                 val reason = String(messageEvent.data)
                 handleSosTrigger(reason)
+            }
+            "/request_emergency_number" -> {
+                val prefs = getSharedPreferences("emergency_settings", Context.MODE_PRIVATE)
+                val emergencyNumber = prefs.getString("emergency_number", null)
+                if (emergencyNumber != null) {
+                    sendMessageToWatch("/response_emergency_number", emergencyNumber.toByteArray(), nodeId)
+                    Log.d(TAG, "Sent emergency number to watch: $emergencyNumber")
+                } else {
+                    sendMessageToWatch("/response_emergency_number", "".toByteArray(), nodeId) // Send empty if not set
+                    Log.d(TAG, "Emergency number not set on phone, sent empty response.")
+                }
             }
             else -> Unit
         }
@@ -339,25 +352,43 @@ class PhoneWearableService : WearableListenerService() {
     @SuppressLint("MissingPermission")
     private fun handleSosTrigger(reason: String) {
         Log.e(TAG, "!!! SOS TRIGGERED !!! Reason: $reason")
-        val emergencyNumber = "01012345678" // TODO 실제 번호
+        val prefs = getSharedPreferences("emergency_settings", Context.MODE_PRIVATE)
+        val emergencyNumber = prefs.getString("emergency_number", null)
+
+        if (emergencyNumber == null) {
+            Log.e(TAG, "Emergency number not set. Cannot trigger SOS.")
+            createSosNotification("긴급 연락처 미설정", "앱에서 긴급 연락처를 설정해주세요.")
+            return
+        }
+
         fusedLocationClient.lastLocation
-            .addOnSuccessListener { location ->
+            .addOnCompleteListener { task ->
+                val location = if (task.isSuccessful) task.result else null
                 val link = location?.let {
                     "https://www.google.com/maps/search/?api=1&query=${it.latitude},${it.longitude}"
                 } ?: "위치 정보 없음"
+
+                if (task.exception != null) {
+                    Log.e(TAG, "SOS location failed", task.exception)
+                }
+
                 val sms = SmsManager.getDefault()
                 val msg = "긴급 SOS!\n사유: $reason\n위치: $link"
+
+                val sentIntent = PendingIntent.getBroadcast(this, 0, Intent(this, SmsSentReceiver::class.java).apply {
+                    putExtra("emergency_number", emergencyNumber)
+                    putExtra("sms_body", msg)
+                }, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+                val deliveredIntent = PendingIntent.getBroadcast(this, 0, Intent(this, SmsDeliveredReceiver::class.java), PendingIntent.FLAG_IMMUTABLE)
+
                 try {
-                    sms.sendTextMessage(emergencyNumber, null, msg, null, null)
-                    Log.d(TAG, "SOS SMS sent")
+                    sms.sendTextMessage(emergencyNumber, null, msg, sentIntent, deliveredIntent)
+                    Log.d(TAG, "SOS SMS sent with tracking intents.")
                 } catch (e: Exception) {
-                    Log.e(TAG, "SOS SMS failed: ${e.message}")
+                    Log.e(TAG, "SOS SMS failed to send", e)
                 }
+
                 createSosNotification(reason, link)
-            }
-            .addOnFailureListener { e ->
-                Log.e(TAG, "SOS location failed: ${e.message}")
-                createSosNotification(reason, "위치 정보 없음")
             }
     }
 
