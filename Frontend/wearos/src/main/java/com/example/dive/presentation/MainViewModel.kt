@@ -1,5 +1,6 @@
 package com.example.dive.presentation
 
+import TideWeeklyResponse
 import android.app.Application
 import android.content.SharedPreferences
 import android.graphics.Bitmap
@@ -86,6 +87,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // --- 기존 UI States ---
     private val _tideUiState = MutableStateFlow<TideUiState>(TideUiState.Loading)
     val tideUiState: StateFlow<TideUiState> = _tideUiState.asStateFlow()
+    // 🔹 주간 물때 UI State 추가
+    private val _tideWeeklyState = MutableStateFlow<TideWeeklyResponse?>(null)
+    val tideWeeklyState: StateFlow<TideWeeklyResponse?> = _tideWeeklyState.asStateFlow()
     private val _weatherUiState = MutableStateFlow<WeatherUiState>(WeatherUiState.Loading)
     val weatherUiState: StateFlow<WeatherUiState> = _weatherUiState.asStateFlow()
     private val _fishingPointsUiState = MutableStateFlow<FishingPointsUiState>(FishingPointsUiState.Loading)
@@ -156,6 +160,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 .collect {
                     _tideUiState.value = TideUiState.Success(it.data)
                     markInitialSyncReceived()
+                }
+        }
+        // MainViewModel.kt init 안에서
+        viewModelScope.launch {
+            repo.getTide7dData()
+                .catch { e ->
+                    Log.e("MainViewModel", "주간 물때 수집 실패", e)
+                    _tideWeeklyState.value = null
+                }
+                .collect { weekly ->
+                    Log.d("MainViewModel", "주간 물때 수신: ${weekly.data.size}일치")
+                    _tideWeeklyState.value = weekly
                 }
         }
 

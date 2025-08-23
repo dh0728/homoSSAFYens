@@ -106,6 +106,13 @@ class PhoneWearableService : WearableListenerService() {
                 val reason = String(messageEvent.data)
                 handleSosTrigger(reason)
             }
+            "/request/tide7d" -> {
+                PhoneCache.loadJson(this, KEY_TIDE7D)?.let {
+                    sendMessageToWatch("/response/tide7d", it.toByteArray(), nodeId)
+                }
+                requestRefresh(nodeId)
+            }
+
             else -> Unit
         }
     }
@@ -198,6 +205,7 @@ class PhoneWearableService : WearableListenerService() {
     private fun refreshAllData(nodeId: String, location: Location?) {
         val (lat, lon) = resolveLatLon(location)
         fetchTideData(lat, lon, nodeId)
+        fetchTide7dData(lat, lon, nodeId)
         fetchWeatherData(lat, lon, nodeId)
         fetchWeather7dData(lat, lon, nodeId)
         fetchFishingPoints(lat, lon, nodeId)
@@ -400,5 +408,36 @@ class PhoneWearableService : WearableListenerService() {
         private const val KEY_W6H = "last_w6h_json"
         private const val KEY_W7D = "last_w7d_json"
         private const val KEY_FISH = "last_fish_json"
+        private const val KEY_TIDE7D = "last_tide7d_json"
+
     }
+
+    private fun fetchTide7dData(lat: Double?, lon: Double?, nodeId: String) {
+        Log.d(TAG, "🌊 fetchTide7dData 요청 lat=$lat lon=$lon nodeId=$nodeId")
+        if (lat == null || lon == null) {
+            sendMessageToWatch("/response/tide7d/error", "Location not available".toByteArray(), nodeId)
+            return
+        }
+        RetrofitClient.instance.getWeeklyTide(lat, lon)   // ✅ 여기서 getWeeklyTide 사용
+            .enqueue(object : Callback<TideWeeklyResponse> {
+                override fun onResponse(call: Call<TideWeeklyResponse>, response: Response<TideWeeklyResponse>) {
+                    if (response.isSuccessful) {
+                        val body = response.body()
+                        val payload = gson.toJson(body).toByteArray()
+                        Log.d(TAG, "🌊 fetchTide7dData 성공 ${body?.data?.size}일치")
+                        sendMessageToWatch("/response/tide7d", payload, nodeId)
+                        body?.let { PhoneCache.saveJson(this@PhoneWearableService, KEY_TIDE7D, it) }
+                    } else {
+                        sendMessageToWatch("/response/tide7d/error", "API Error: ${response.code()}".toByteArray(), nodeId)
+                    }
+                }
+                override fun onFailure(call: Call<TideWeeklyResponse>, t: Throwable) {
+                    Log.e(TAG, "🌊 fetchTide7dData 실패: ${t.message}")
+                    sendMessageToWatch("/response/tide7d/error", (t.message ?: "error").toByteArray(), nodeId)
+                }
+            })
+    }
+
+
+
 }
