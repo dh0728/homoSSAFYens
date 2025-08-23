@@ -74,6 +74,12 @@ class WatchMessageListenerService : WearableListenerService() {
                     "/response/7dweather" -> { repo.saveWeather7dJson(data.decodeToString()) }
                     "/response/locations" -> { repo.saveFishingJson(data.decodeToString()) }
                     "/response/current_location" -> { repo.saveLocationJson(data.decodeToString()); updateTile = true }
+
+                    // ✅ 추가: 주간 물때
+                    "/response/tide7d" -> {
+                        repo.saveTide7dJson(data.decodeToString())
+                        updateTile = true
+                    }
                 }
             } catch (e: Exception) {
                 Log.e("WatchMsgSvc", "Save to DataStore failed: ${e.message}", e)

@@ -24,7 +24,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import androidx.wear.compose.material.*
+import androidx.wear.compose.navigation.SwipeDismissableNavHost
+import androidx.wear.compose.navigation.composable
+import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
 import androidx.compose.ui.Alignment // Add this import
 import androidx.compose.foundation.layout.Column // Add this import
 import androidx.wear.compose.material.CircularProgressIndicator // Add this import
@@ -37,6 +42,7 @@ import com.example.dive.service.HeartRateMonitoringService
 import java.util.concurrent.TimeUnit // Add this import
 import com.example.dive.emergency.EmergencyManager
 import com.example.dive.presentation.theme.DiveTheme
+import com.example.dive.presentation.ui.CastingScreen
 import com.example.dive.presentation.ui.DetailedWeatherScreen
 import com.example.dive.presentation.ui.EmergencyScreen
 import com.example.dive.presentation.ui.FishingPointsScreen
@@ -80,6 +86,8 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
+            val activityViewModel = this@MainActivity.viewModel
+            val navController = rememberSwipeDismissableNavController()
             DiveTheme {
                 val initialSyncDone by viewModel.initialSyncDoneFlow.collectAsState()
                 val syncHint by viewModel.syncHintState.collectAsState()
@@ -88,7 +96,17 @@ class MainActivity : ComponentActivity() {
                     // Show a simple loading screen while initial data is fetched
                     FullScreenLoadingScreen()
                 } else {
-                    MainApp(viewModel = viewModel)
+                    SwipeDismissableNavHost(
+                        navController = navController,
+                        startDestination = "main"
+                    ) {
+                        composable("main") {
+                            MainApp(viewModel = activityViewModel, navController)
+                        }
+                        composable("casting") {
+                            CastingScreen(navController)
+                        }
+                    }
                 }
             }
         }
@@ -102,7 +120,8 @@ class MainActivity : ComponentActivity() {
         ) {
             ActivityCompat.requestPermissions(
                 this,
-                arrayOf(Manifest.permission.BODY_SENSORS),
+                arrayOf(Manifest.permission.BODY_SENSORS,
+                    Manifest.permission.ACTIVITY_RECOGNITION),
                 REQUEST_BODY_SENSORS_PERMISSION
             )
         }
@@ -123,7 +142,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    
+
 
     companion object {
         private const val REQUEST_BODY_SENSORS_PERMISSION = 1
@@ -180,9 +199,10 @@ fun FullScreenLoadingScreen() {
 
 @Composable
 fun MainApp(
-    viewModel: MainViewModel
+    viewModel: MainViewModel, navController: NavHostController
 ) {
     val tideUiState by viewModel.tideUiState.collectAsState()
+    val tideWeeklyState by viewModel.tideWeeklyState.collectAsState()
     val weatherUiState by viewModel.weatherUiState.collectAsState()
     val detailedWeatherUiState by viewModel.detailedWeatherUiState.collectAsState()
     val fishingPointsUiState by viewModel.fishingPointsUiState.collectAsState()
@@ -225,12 +245,12 @@ fun MainApp(
         Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colors.background)) {
             HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                 when (page) {
-                    0 -> TideScreen(uiState = tideUiState)
+                    0 -> TideScreen(uiState = tideUiState, tideWeekly = tideWeeklyState)
                     1 -> WeatherScreen(uiState = weatherUiState)
                     2 -> DetailedWeatherScreen(uiState = detailedWeatherUiState)
                     3 -> FishingPointsScreen(uiState = fishingPointsUiState, viewModel = viewModel, pagerState = pagerState)
                     4 -> EmergencyScreen(viewModel = viewModel)
-                    5 -> SettingsScreen()
+                    5 -> SettingsScreen(viewModel = viewModel, navController = navController)
                 }
             }
         }

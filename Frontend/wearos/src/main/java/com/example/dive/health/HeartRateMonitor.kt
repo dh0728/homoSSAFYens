@@ -29,7 +29,6 @@ import com.example.dive.R // Added this
 
 import com.example.dive.data.HealthRepository
 import com.example.dive.presentation.MainViewModel
-import com.example.dive.presentation.ui.EmergencyAlertActivity
 import com.example.dive.presentation.ui.EmergencyCountdownActivity
 
 class HeartRateMonitor(

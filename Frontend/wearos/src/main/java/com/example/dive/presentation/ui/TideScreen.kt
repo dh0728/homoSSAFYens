@@ -1,7 +1,11 @@
 package com.example.dive.presentation.ui
 
+import Tide7day
+import TideWeeklyResponse
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -28,30 +32,32 @@ import com.example.dive.presentation.theme.*
 @Composable
 fun TideScreen(
     uiState: TideUiState,
-    syncHint: SyncHint = SyncHint.NONE // 추가: 상단 안내 배지 노출용 (옵션)
+    tideWeekly: TideWeeklyResponse? = null,
+    syncHint: SyncHint = SyncHint.NONE
 ) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        when (uiState) {
-            is TideUiState.Loading -> {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    // 안내 배지(옵션)
-                    if (syncHint == SyncHint.PROMPT) {
-                        SyncPromptBadge(
-                            text = "휴대폰에서 앱을 열어 동기화하세요"
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
+    when (uiState) {
+        is TideUiState.Loading -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                if (syncHint == SyncHint.PROMPT) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        SyncPromptBadge("휴대폰에서 앱을 열어 동기화하세요")
+                        Spacer(Modifier.height(8.dp))
+                        CircularProgressIndicator()
                     }
+                } else {
                     CircularProgressIndicator()
                 }
             }
-            is TideUiState.Error -> {
+        }
+
+        is TideUiState.Error -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
                 Text(
                     text = "물때 정보를 가져올 수 없습니다.",
                     modifier = Modifier.padding(16.dp),
@@ -59,32 +65,75 @@ fun TideScreen(
                     color = MaterialTheme.colors.error
                 )
             }
-            is TideUiState.Success -> {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = 4.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    // 성공 상태에서도 아직 다른 데이터 동기화 중이면 배지 표시 가능
-                    if (syncHint == SyncHint.PROMPT) {
-                        SyncPromptBadge(
-                            text = "휴대폰에서 앱을 열어 동기화하세요"
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                    }
+        }
+
+        is TideUiState.Success -> {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 8.dp),
+                contentPadding = PaddingValues(
+                    top = 4.dp,
+                    bottom = 24.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // 오늘 물때
+                item {
                     TideInfoCard(tideData = uiState.tideData)
                 }
+
+                tideWeekly?.let { response ->
+                    Log.d("TideScreen", "주간 물때 UI 진입: ${response.data.size}일치")
+                    val weeklyData = response.data.drop(1)
+                    items(weeklyData.size) { index ->
+                        Log.d("TideScreen", "렌더링 index=$index -> ${weeklyData[index].date}")
+                        TideInfoCard(tideData = weeklyData[index].toTideData())
+                    }
+                }
+
             }
         }
     }
 }
 
 @Composable
+fun TideInfoCard(tideData: Tide7day) {
+    TideInfoCard(tideData.toTideData())
+}
+
+
+
+fun Tide7day.toTideData(): TideData {
+    return TideData(
+        date = this.date,
+        weekday = this.weekday,
+        lunar = this.lunar,
+        locationName = this.locationName,
+        mul = this.mul,
+        sunrise = this.sunrise,
+        sunset = this.sunset,
+        moonrise = this.moonrise ?: "",
+        moonset = this.moonset ?: "",
+        events = this.events.map {
+            TideEvent(
+                time = it.time,
+                levelCm = it.levelCm,
+                trend = it.trend,
+                deltaCm = it.deltaCm
+            )
+        }
+    )
+}
+
+
+
+@Composable
 private fun SyncPromptBadge(text: String) {
     Card(onClick = { /* no-op */ }, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
         Box(
-            modifier = Modifier.padding(vertical = 6.dp, horizontal = 8.dp),
+            modifier = Modifier.padding(vertical = 7.dp, horizontal = 8.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -102,7 +151,7 @@ fun TideInfoCard(tideData: TideData) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 8.dp, vertical = 6.dp),
+            .padding(horizontal = 12.dp, vertical = 7.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
@@ -150,7 +199,7 @@ fun TideInfoCard(tideData: TideData) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 9.dp)
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp)
             ) {
                 TideEventCell(
                     event = tideData.events.getOrNull(0) ?: TideEvent("--:--", 0, "만조", 0),
@@ -185,7 +234,7 @@ fun TopBar(date: String, weekday: String) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
-            .padding(horizontal = 10.dp, vertical = 2.dp),
+            .padding(horizontal = 8.dp, vertical = 2.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -220,7 +269,7 @@ fun TideEventCell(event: TideEvent, modifier: Modifier = Modifier) {
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
             .background(backgroundColor)
-            .padding(horizontal = 5.dp, vertical = 3.dp),
+            .padding(horizontal = 3.dp, vertical = 3.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -235,7 +284,7 @@ fun TideEventCell(event: TideEvent, modifier: Modifier = Modifier) {
                         else -> TextTertiary
                     }
                 )
-                .padding(horizontal = 4.dp, vertical = 1.dp)
+                .padding(horizontal = 3.dp, vertical = 1.dp)
         ) {
             Text(
                 text = trendLabel,

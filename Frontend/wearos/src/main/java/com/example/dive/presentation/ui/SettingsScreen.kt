@@ -15,6 +15,7 @@ import com.example.dive.presentation.theme.TextSecondary
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.navigation.NavHostController
 
 enum class MarineActivityMode(val label: String) {
     OFF("모드 해제"),
@@ -34,7 +35,7 @@ fun RadioIcon(checked: Boolean) {
 }
 
 @Composable
-fun SettingsScreen(viewModel: MainViewModel = viewModel()) {
+fun SettingsScreen(viewModel: MainViewModel = viewModel(), navController: NavHostController) {
     val isMonitoringEnabled by viewModel.isMonitoringEnabled.collectAsState()
     val selectedMode by viewModel.selectedMarineActivityMode.collectAsState()
 
@@ -55,14 +56,28 @@ fun SettingsScreen(viewModel: MainViewModel = viewModel()) {
 
         items(MarineActivityMode.values().size) { index ->
             val mode = MarineActivityMode.values()[index]
-            ToggleChip(
-                checked = selectedMode == mode,
-                onCheckedChange = { viewModel.setSelectedMarineActivityMode(mode) },
-                label = { Text(mode.label, color = TextPrimary) },
-                toggleControl = { RadioIcon(checked = selectedMode == mode) },
-                modifier = Modifier.fillMaxWidth()
-            )
+            Column(Modifier.fillMaxWidth()) {
+                ToggleChip(
+                    checked = selectedMode == mode,
+                    onCheckedChange = { viewModel.setSelectedMarineActivityMode(mode) },
+                    label = { Text(mode.label, color = TextPrimary) },
+                    toggleControl = { RadioIcon(checked = selectedMode == mode) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // ✅ 낚시 모드일 때만, 토글 바로 밑에 버튼 추가
+                if (selectedMode == MarineActivityMode.FISHING && mode == MarineActivityMode.FISHING) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Button(
+                        onClick = { navController.navigate("casting") },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("캐스팅 측정하기")
+                    }
+                }
+            }
         }
+
 
         item { Spacer(modifier = Modifier.height(16.dp)) }
 
