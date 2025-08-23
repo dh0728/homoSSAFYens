@@ -1,6 +1,7 @@
 package com.homoSSAFYens.homSSAFYens.service;
 
 
+import com.homoSSAFYens.homSSAFYens.common.TideCalcUtil;
 import com.homoSSAFYens.homSSAFYens.dto.TideDailyInfo;
 import com.homoSSAFYens.homSSAFYens.dto.TideHighInfo;
 import com.homoSSAFYens.homSSAFYens.quartz.TideNotifyJob;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -84,7 +86,7 @@ public class ScheduleService {
         if (highs.isEmpty()) {
             TideDailyInfo daily = tideService.getDaily(lat, lon); //외부 api 호출 + 캐싱
             if (daily != null) {
-                highs = tideRepo.upcomingHighTidesFromDaily(geoKey, nowEpoch);
+                highs = TideCalcUtil.highsFromDaily(daily, ZoneId.of("Asia/Seoul"), nowEpoch);
             }
         }
 
