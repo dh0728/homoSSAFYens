@@ -1,5 +1,6 @@
 package com.example.dive.service
 
+import android.net.Uri
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -372,6 +373,7 @@ class PhoneWearableService : WearableListenerService() {
                     Log.e(TAG, "SOS location failed", task.exception)
                 }
 
+                // Send SMS (existing logic)
                 val sms = SmsManager.getDefault()
                 val msg = "긴급 SOS!\n사유: $reason\n위치: $link"
 
@@ -386,6 +388,18 @@ class PhoneWearableService : WearableListenerService() {
                     Log.d(TAG, "SOS SMS sent with tracking intents.")
                 } catch (e: Exception) {
                     Log.e(TAG, "SOS SMS failed to send", e)
+                }
+
+                // Initiate Phone Call (NEW LOGIC)
+                try {
+                    val callIntent = Intent(Intent.ACTION_CALL).apply {
+                        data = Uri.parse("tel:$emergencyNumber")
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) // Required for starting activity from a service
+                    }
+                    startActivity(callIntent)
+                    Log.d(TAG, "Emergency call initiated to: $emergencyNumber")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to initiate emergency call", e)
                 }
 
                 createSosNotification(reason, link)

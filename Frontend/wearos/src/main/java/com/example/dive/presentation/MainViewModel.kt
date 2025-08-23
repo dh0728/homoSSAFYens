@@ -135,7 +135,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 initialValue = 0
             )
 
-    private var initialSyncDone = false
+    private val _initialSyncDone = MutableStateFlow(false)
+    val initialSyncDoneFlow: StateFlow<Boolean> = _initialSyncDone.asStateFlow()
     private var pollingJob: Job? = null
 
     init {
@@ -221,7 +222,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 .onStart { emit(false) }
                 .distinctUntilChanged()
                 .collect { connected ->
-                    if (connected && !fired && !initialSyncDone) {
+                    if (connected && !fired && !_initialSyncDone.value) {
                         fired = true
                         safeRequestRefresh("on-connect")
                     }
@@ -273,20 +274,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun markInitialSyncReceived() {
-        if (!initialSyncDone) {
-            initialSyncDone = true
+        if (!_initialSyncDone.value) { // Fix initialSyncDone reference
+            _initialSyncDone.value = true
             _syncHintState.value = SyncHint.NONE
-            pollingJob?.cancel()
+            pollingJob?.cancel() // Use safe call
             pollingJob = null
         }
     }
 
     private fun startPollingRefresh() {
-        if (pollingJob?.isActive == true) return
+        if (pollingJob?.isActive == true) return // Use safe call for nullable Job
         pollingJob = viewModelScope.launch {
             val backoffs = listOf(6000L, 8000L, 10000L)
             for ((idx, waitMs) in backoffs.withIndex()) {
-                if (initialSyncDone) break
+                if (_initialSyncDone.value) break
                 if (phoneConnected.value) {
                     safeRequestRefresh("polling-connect-$idx")
                 } else {

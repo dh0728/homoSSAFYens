@@ -57,6 +57,7 @@ dependencies {
     // Compose UI
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation(libs.androidx.work.runtime.ktx)
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     // OSMDroid (Interactive Map)

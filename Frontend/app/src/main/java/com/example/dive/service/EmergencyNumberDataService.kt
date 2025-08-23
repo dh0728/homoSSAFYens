@@ -1,6 +1,8 @@
 package com.example.dive.service
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import com.google.android.gms.wearable.DataEvent
 import com.google.android.gms.wearable.DataEventBuffer
@@ -61,5 +63,22 @@ class EmergencyNumberDataService : WearableListenerService() {
         private const val REQUEST_PATH = "/request_emergency_number"
         private const val RESPONSE_PATH = "/response_emergency_number"
         private const val KEY_EMERGENCY_NUMBER = "emergency_number"
+    }
+
+    private fun initiateEmergencyCall() {
+        val prefs = getSharedPreferences("emergency_settings", Context.MODE_PRIVATE)
+        val emergencyNumber = prefs.getString("emergency_number", null)
+
+        if (emergencyNumber.isNullOrEmpty()) {
+            Log.e(TAG, "Emergency number not set. Cannot initiate call.")
+            return
+        }
+
+        val callIntent = Intent(Intent.ACTION_CALL).apply {
+            data = Uri.parse("tel:$emergencyNumber")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        startActivity(callIntent)
+        Log.d(TAG, "Initiated emergency call to: $emergencyNumber")
     }
 }

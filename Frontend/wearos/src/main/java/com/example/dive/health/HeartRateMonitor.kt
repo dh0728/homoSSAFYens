@@ -1,6 +1,12 @@
 package com.example.dive.health
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import androidx.core.app.NotificationCompat
 import android.content.Context
+import android.content.Intent
+import android.content.SharedPreferences
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -8,6 +14,7 @@ import android.hardware.SensorManager
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import androidx.preference.PreferenceManager
 import com.example.dive.data.model.LocationData
 import com.example.dive.emergency.EmergencyManager
 import com.example.dive.presentation.ui.MarineActivityMode
@@ -18,18 +25,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.example.dive.R // Added this
 
 import com.example.dive.data.HealthRepository
+import com.example.dive.presentation.MainViewModel
+import com.example.dive.presentation.ui.EmergencyAlertActivity
+import com.example.dive.presentation.ui.EmergencyCountdownActivity
 
 class HeartRateMonitor(
     private val context: Context,
-    private var marineActivityModeFlow: StateFlow<MarineActivityMode>,
     private val healthRepository: HealthRepository
 ) : SensorEventListener {
-
-    fun setModeFlow(flow: StateFlow<MarineActivityMode>) {
-        this.marineActivityModeFlow = flow
-    }
 
     private val sensorManager: SensorManager by lazy {
         context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -61,7 +67,7 @@ class HeartRateMonitor(
 
     // No init block needed for marineActivityModeFlow collection here anymore
 
-    fun startMonitoring(durationMillis: Long = 40_000L, onStopped: (() -> Unit)? = null) {
+    fun startMonitoring(durationMillis: Long = 40_000L, onMeasurementComplete: ((Int) -> Unit)? = null) {
         if (!isMonitoring) {
             // 리셋
             heartRateSum = 0
@@ -77,7 +83,7 @@ class HeartRateMonitor(
         // duration 후 자동 종료
         Handler(Looper.getMainLooper()).postDelayed({
             stopMonitoring()
-            onStopped?.invoke()
+            onMeasurementComplete?.invoke(if (heartRateCount > 0) heartRateSum / heartRateCount else 0)
         }, durationMillis)
     }
 
@@ -90,7 +96,32 @@ class HeartRateMonitor(
         val avg = if (heartRateCount > 0) heartRateSum / heartRateCount else 0
         healthRepository.setLastAverageHr(avg.takeIf { it > 0 } ?: 0)
         Log.d("HeartRateMonitor", "Average Heart Rate: ${avg}")
+        checkAndTriggerEmergency(avg) // Call new function
         Log.d("HeartRateMonitor", "Stopped monitoring heart rate")
+    }
+
+    private fun checkAndTriggerEmergency(measuredHr: Int) {
+        val sharedPreferences: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
+        val modeName = sharedPreferences.getString(MainViewModel.KEY_MARINE_ACTIVITY_MODE, MarineActivityMode.OFF.name)
+        val currentMarineMode = MarineActivityMode.valueOf(modeName ?: MarineActivityMode.OFF.name)
+
+        val userState = UserState(
+            isSleeping = false, // Placeholder
+            activityLevel = ActivityLevel.RESTING, // Placeholder
+            marineActivityMode = currentMarineMode,
+            confidence = 1.0f,
+            detectionMethod = "HeartRateMonitor"
+        )
+
+        val thresholds = detector.getHeartRateThresholds(userState)
+        if (measuredHr > 0 && measuredHr < thresholds.criticalMin) {
+            Log.e("HeartRateMonitor", "CRITICAL LOW HEART RATE DETECTED: $measuredHr bpm (Threshold: ${thresholds.criticalMin})")
+
+            val intent = Intent(context, EmergencyCountdownActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        }
     }
 
     override fun onSensorChanged(event: SensorEvent?) {

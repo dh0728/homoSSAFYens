@@ -15,6 +15,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.INTERNET"/> <!-- OSMDroid를 위해 추가 -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:name=".App"
@@ -93,6 +94,12 @@
             android:foregroundServiceType="health"
             tools:ignore="ForegroundServicePermission" />
 
+        <service
+            android:name=".service.HeartRateMonitoringService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="health" />
+
         <activity
             android:name=".presentation.MainActivity"
             android:exported="true"
@@ -105,6 +112,12 @@
                 <category android:name="com.google.android.wearable.watchface.category.COMPANION_CONFIGURATION" />
             </intent-filter>
         </activity>
+
+
+        <activity
+            android:name=".presentation.ui.EmergencyCountdownActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen" />
 
 <!--        <activity-->
 <!--            android:name=".debug.DebugSoundActivity"-->

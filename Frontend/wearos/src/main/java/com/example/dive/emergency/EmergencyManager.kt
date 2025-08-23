@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
+import com.example.dive.Constants
 
 object EmergencyManager {
 
@@ -117,7 +118,7 @@ object EmergencyManager {
         emergencyNumberResponseDeferreds[requestId] = deferred
 
         val listener = DataClient.OnDataChangedListener {
-            dataEvents ->
+                dataEvents ->
             dataEvents.forEach { event ->
                 if (event.type == DataEvent.TYPE_CHANGED) {
                     val dataItem = event.dataItem
@@ -156,12 +157,5 @@ object EmergencyManager {
             emergencyNumberResponseDeferreds.remove(requestId)
             dataClient.removeListener(listener)
         }
-    }
-
-    // This function is no longer used in the current logic.
-    // It's kept here for historical context or if delegation is re-introduced.
-    // It would typically send a message to the phone to handle the SOS.
-    private suspend fun sendSosToPhone(context: Context, reason: String) {
-        Log.d(TAG, "sendSosToPhone: This function is currently inactive.")
     }
 }
