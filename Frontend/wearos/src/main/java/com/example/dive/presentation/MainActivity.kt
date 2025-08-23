@@ -115,6 +115,7 @@ fun MainApp(
     viewModel: MainViewModel
 ) {
     val tideUiState by viewModel.tideUiState.collectAsState()
+    val tideWeeklyState by viewModel.tideWeeklyState.collectAsState()
     val weatherUiState by viewModel.weatherUiState.collectAsState()
     val detailedWeatherUiState by viewModel.detailedWeatherUiState.collectAsState()
     val fishingPointsUiState by viewModel.fishingPointsUiState.collectAsState()
@@ -148,7 +149,7 @@ fun MainApp(
         Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colors.background)) {
             HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                 when (page) {
-                    0 -> TideScreen(uiState = tideUiState)
+                    0 -> TideScreen(uiState = tideUiState, tideWeekly = tideWeeklyState)
                     1 -> WeatherScreen(uiState = weatherUiState)
                     2 -> DetailedWeatherScreen(uiState = detailedWeatherUiState)
                     3 -> FishingPointsScreen(uiState = fishingPointsUiState, viewModel = viewModel, pagerState = pagerState)

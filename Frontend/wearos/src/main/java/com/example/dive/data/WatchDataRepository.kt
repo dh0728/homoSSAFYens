@@ -1,5 +1,6 @@
 package com.example.dive.data
 
+import TideWeeklyResponse
 import android.content.Context
 import android.util.Log
 import androidx.datastore.core.DataStore
@@ -74,6 +75,7 @@ class WatchDataRepository(private val context: Context) {
         val W7D = stringPreferencesKey("weather7d_json")
         val FISH = stringPreferencesKey("fishing_json")
         val LOC  = stringPreferencesKey("location_json")
+        val TIDE7D = stringPreferencesKey("tide7d_json")
     }
 
     // Write APIs
@@ -82,6 +84,20 @@ class WatchDataRepository(private val context: Context) {
     suspend fun saveWeather7dJson(raw: String) { dataStore.edit { it[Keys.W7D] = raw } }
     suspend fun saveFishingJson(raw: String) { dataStore.edit { it[Keys.FISH] = raw } }
     suspend fun saveLocationJson(raw: String) { dataStore.edit { it[Keys.LOC] = raw } }
+    suspend fun saveTide7dJson(raw: String) {
+        dataStore.edit { it[Keys.TIDE7D] = raw }
+    }
+
+    fun getTide7dData(): Flow<TideWeeklyResponse> =
+        dataStore.data.map { it[Keys.TIDE7D] }.filterNotNull().map { json ->
+            runCatching { gson.fromJson(json, TideWeeklyResponse::class.java) }
+                .getOrElse { e ->
+                    Log.e(TAG, "Parse tide7d failed: ${e.message}", e)
+                    TideWeeklyResponse("error", 0, "parse error", emptyList())
+                }
+        }
+
+
 
     // Read Flows with parse-safety
     fun getTideData(): Flow<TideResponse> =
