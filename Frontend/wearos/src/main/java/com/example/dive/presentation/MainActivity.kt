@@ -23,9 +23,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import androidx.wear.compose.material.*
+import androidx.wear.compose.navigation.SwipeDismissableNavHost
+import androidx.wear.compose.navigation.composable
+import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
 import com.example.dive.emergency.EmergencyManager
 import com.example.dive.presentation.theme.DiveTheme
+import com.example.dive.presentation.ui.CastingScreen
 import com.example.dive.presentation.ui.DetailedWeatherScreen
 import com.example.dive.presentation.ui.EmergencyScreen
 import com.example.dive.presentation.ui.FishingPointsScreen
@@ -50,8 +56,19 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val activityViewModel = this@MainActivity.viewModel
+            val navController = rememberSwipeDismissableNavController()
             DiveTheme {
-                MainApp(viewModel = activityViewModel)
+                SwipeDismissableNavHost(
+                    navController = navController,
+                    startDestination = "main"
+                ) {
+                    composable("main") {
+                        MainApp(viewModel = activityViewModel, navController)
+                    }
+                    composable("casting") {
+                        CastingScreen(navController)
+                    }
+                }
             }
         }
     }
@@ -64,7 +81,8 @@ class MainActivity : ComponentActivity() {
         ) {
             ActivityCompat.requestPermissions(
                 this,
-                arrayOf(Manifest.permission.BODY_SENSORS),
+                arrayOf(Manifest.permission.BODY_SENSORS,
+                    Manifest.permission.ACTIVITY_RECOGNITION),
                 REQUEST_BODY_SENSORS_PERMISSION
             )
         }
@@ -112,7 +130,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainApp(
-    viewModel: MainViewModel
+    viewModel: MainViewModel, navController: NavHostController
 ) {
     val tideUiState by viewModel.tideUiState.collectAsState()
     val tideWeeklyState by viewModel.tideWeeklyState.collectAsState()
@@ -154,7 +172,7 @@ fun MainApp(
                     2 -> DetailedWeatherScreen(uiState = detailedWeatherUiState)
                     3 -> FishingPointsScreen(uiState = fishingPointsUiState, viewModel = viewModel, pagerState = pagerState)
                     4 -> EmergencyScreen(viewModel = viewModel)
-                    5 -> SettingsScreen()
+                    5 -> SettingsScreen(viewModel = viewModel, navController = navController)
                 }
             }
         }
