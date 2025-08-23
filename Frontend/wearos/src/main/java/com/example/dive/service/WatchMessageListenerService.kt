@@ -37,8 +37,6 @@ class WatchMessageListenerService : WearableListenerService() {
         scope.cancel()
     }
 
-
-
     override fun onMessageReceived(messageEvent: MessageEvent) {
         val path = messageEvent.path
         val data = messageEvent.data

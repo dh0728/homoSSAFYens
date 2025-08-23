@@ -59,6 +59,9 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
+    // OSMDroid (Interactive Map)
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
+
     // Compose Foundation (중요! - HorizontalPager 등을 위해)
     implementation("androidx.compose.foundation:foundation")
 
