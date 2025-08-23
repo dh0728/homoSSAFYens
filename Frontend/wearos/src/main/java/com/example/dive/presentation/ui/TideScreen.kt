@@ -133,7 +133,7 @@ fun Tide7day.toTideData(): TideData {
 private fun SyncPromptBadge(text: String) {
     Card(onClick = { /* no-op */ }, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
         Box(
-            modifier = Modifier.padding(vertical = 6.dp, horizontal = 8.dp),
+            modifier = Modifier.padding(vertical = 7.dp, horizontal = 8.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -151,7 +151,7 @@ fun TideInfoCard(tideData: TideData) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 8.dp, vertical = 6.dp),
+            .padding(horizontal = 12.dp, vertical = 7.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
@@ -199,7 +199,7 @@ fun TideInfoCard(tideData: TideData) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 9.dp)
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp)
             ) {
                 TideEventCell(
                     event = tideData.events.getOrNull(0) ?: TideEvent("--:--", 0, "만조", 0),
@@ -234,7 +234,7 @@ fun TopBar(date: String, weekday: String) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
-            .padding(horizontal = 10.dp, vertical = 2.dp),
+            .padding(horizontal = 8.dp, vertical = 2.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -269,7 +269,7 @@ fun TideEventCell(event: TideEvent, modifier: Modifier = Modifier) {
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
             .background(backgroundColor)
-            .padding(horizontal = 5.dp, vertical = 3.dp),
+            .padding(horizontal = 3.dp, vertical = 3.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -284,7 +284,7 @@ fun TideEventCell(event: TideEvent, modifier: Modifier = Modifier) {
                         else -> TextTertiary
                     }
                 )
-                .padding(horizontal = 4.dp, vertical = 1.dp)
+                .padding(horizontal = 3.dp, vertical = 1.dp)
         ) {
             Text(
                 text = trendLabel,

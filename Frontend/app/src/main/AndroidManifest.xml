@@ -13,7 +13,7 @@
     <uses-permission android:name="android.permission.SEND_SMS"/>
     <uses-permission android:name="android.permission.CALL_PHONE"/>
 
-    <!-- 🔹 추가 권한: 백그라운드 위치 / 부팅 후 재등록 -->
+    <!-- 추가 권한: 백그라운드 위치 / 부팅 후 재등록 -->
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
@@ -39,12 +39,17 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false" />
+
         <service
             android:name=".service.PhoneWearableService"
             android:exported="true">
             <intent-filter>
                 <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
                 <data android:scheme="wear" android:host="*" android:pathPrefix="/request"/>
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/emergency"/>
             </intent-filter>
         </service>
 
@@ -78,6 +83,17 @@
                 <action android:name="android.intent.action.TIMEZONE_CHANGED"/>
             </intent-filter>
         </receiver>
+
+        <service android:name=".service.EmergencyNumberDataService" android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.DATA_CHANGED" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/request_emergency_number" />
+            </intent-filter>
+        </service>
+
+        <receiver android:name=".service.SmsSentReceiver" />
+        <receiver android:name=".service.SmsDeliveredReceiver" />
+
     </application>
 
 </manifest>

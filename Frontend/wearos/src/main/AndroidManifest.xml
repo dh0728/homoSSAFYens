@@ -3,7 +3,11 @@
     xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-feature android:name="android.hardware.type.watch" />
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.BODY_SENSORS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -13,6 +17,7 @@
     <uses-permission android:name="android.permission.INTERNET"/> <!-- OSMDroid를 위해 추가 -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
     <uses-permission android:name="android.permission.VIBRATE" />
+
     <application
         android:name=".App"
         android:allowBackup="true"
@@ -90,6 +95,12 @@
             android:foregroundServiceType="health"
             tools:ignore="ForegroundServicePermission" />
 
+        <service
+            android:name=".service.HeartRateMonitoringService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="health" />
+
         <activity
             android:name=".presentation.MainActivity"
             android:exported="true"
@@ -102,6 +113,12 @@
                 <category android:name="com.google.android.wearable.watchface.category.COMPANION_CONFIGURATION" />
             </intent-filter>
         </activity>
+
+
+        <activity
+            android:name=".presentation.ui.EmergencyCountdownActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen" />
 
 <!--        <activity-->
 <!--            android:name=".debug.DebugSoundActivity"-->

@@ -57,6 +57,7 @@ dependencies {
     // Compose UI
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation(libs.androidx.work.runtime.ktx)
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     // OSMDroid (Interactive Map)
@@ -95,6 +96,7 @@ dependencies {
     implementation("androidx.wear.watchface:watchface-complications-data-source-ktx:1.2.1")
 
     // Google Play Services
+    implementation(libs.play.services.location)
     implementation("com.google.android.gms:play-services-wearable:18.1.0")
     implementation("com.google.android.gms:play-services-tasks:18.0.2")
 

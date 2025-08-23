@@ -32,7 +32,6 @@ class App : Application() {
 
         heartRateMonitor = HeartRateMonitor(
             context = this,
-            marineActivityModeFlow = marineModeFallback,
             healthRepository = healthRepo
         )
 
