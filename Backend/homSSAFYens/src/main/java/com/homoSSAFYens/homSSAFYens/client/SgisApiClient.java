@@ -1,6 +1,7 @@
 package com.homoSSAFYens.homSSAFYens.client;
 
 import com.homoSSAFYens.homSSAFYens.config.ClientProperties;
+import com.homoSSAFYens.homSSAFYens.dto.SgisGeoCodewgs84Response;
 import com.homoSSAFYens.homSSAFYens.dto.SgisKeyResponse;
 import com.homoSSAFYens.homSSAFYens.dto.SgisTranscoordResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,7 @@ public class SgisApiClient {
     private static final String REDIS_KEY = "sgisAccessToken";
     private static final String ISSUE_PATH = "/auth/authentication.json";
     private static final String TRANS_POSITION_PATH = "/transformation/transcoord.json";
+    private static final String GEOCODEWGS84_PATH = "/addr/geocodewgs84.json";
 
     private final WebClient wc;
     private final String consumerKey;
@@ -123,4 +125,45 @@ public class SgisApiClient {
         return res;
     }
 
+
+    // 입력된 주소 위치 제공 API(좌표계:WGS84, EPSG:4326)
+    public Optional<SgisGeoCodewgs84Response> getGeoCodewgs84(String address) {
+        final String token = Optional.ofNullable(redis.opsForValue().get(REDIS_KEY))
+                .filter(StringUtils::hasText)
+                .orElseGet(this::getSgisAccessKey);
+
+        SgisGeoCodewgs84Response res = wc.get()
+                .uri(b -> b
+                        .path(GEOCODEWGS84_PATH)
+                        .queryParam("accessToken", token)
+                        .queryParam("address", address)
+                        .queryParam("pagenum", 0)
+                        .queryParam("resultcount", 1)
+                        .build())
+                .retrieve()
+                .bodyToMono(SgisGeoCodewgs84Response.class)
+                .block();
+
+        if (res == null) {
+            throw new IllegalStateException("SGIS geocode(WGS84) response is null");
+        }
+
+        // 검색 결과 없음 처리
+        if (res.getErrCd() != null && res.getErrCd() == -100) {
+            return Optional.empty();
+        }
+
+        // 그 외 에러는 예외 처리
+        if (res.getErrCd() != null && res.getErrCd() != 0) {
+            throw new IllegalStateException("SGIS geocode(WGS84) error: errCd=" + res.getErrCd()
+                    + ", errMsg=" + res.getErrMsg());
+        }
+
+        if (res.getResult() == null || res.getResult().getResultData() == null
+                || res.getResult().getResultData().isEmpty()) {
+            return Optional.empty();
+        }
+
+        return Optional.of(res);
+    }
 }
