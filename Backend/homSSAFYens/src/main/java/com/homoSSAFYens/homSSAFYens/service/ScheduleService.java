@@ -1,6 +1,7 @@
 package com.homoSSAFYens.homSSAFYens.service;
 
 
+import com.homoSSAFYens.homSSAFYens.common.TideAlertPlanner;
 import com.homoSSAFYens.homSSAFYens.common.TideCalcUtil;
 import com.homoSSAFYens.homSSAFYens.dto.TideDailyInfo;
 import com.homoSSAFYens.homSSAFYens.dto.TideHighInfo;
@@ -15,8 +16,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Date;
@@ -42,6 +45,7 @@ public class ScheduleService {
     private final TideService tideService;
     private final CacheService cacheService;
     private final StringRedisTemplate redis;
+    private final DangerZoneService dangerZoneService;
 
     private long graceSec = 60;  //  임박 잡 살려둘 시간(초)
     private long indexTtlDays = 3; //  멱등 인덱스 SET TTL(일)
@@ -95,56 +99,134 @@ public class ScheduleService {
             return;
         }
 
-        List<Integer> offsets = offsetService.forDevice(deviceId);
-        String sIdxKey = idxKey(deviceId); // 멱등 인덱스 SET
 
-        int testTime = 10;
+        // highs 에는 TideHighInfo가 한개일수도 두개 일수도 있음 각각 만조 시간에 대한 리스트를 뽑아와야함
+        TideDailyInfo tideDailyInfo = tideService.getDaily(lat, lon);
+        // tideDatlyInfo 에는 간만조 시간이 순서대로 들어있음
+        // 간조와 만조 중에 뭐가 먼저 인지는 모름
+//      데이터 예시 tideDailyInfo.events();
+//        "events": [
+//        {
+//            "time": "00:11:00",
+//                "levelCm": 91,     물높이
+//                "trend": "RISING",
+//                "deltaCm": 57      간조와 비교했을 때 물이 올라온 정도
+//        },
+//        {
+//            "time": "06:24:00",
+//                "levelCm": 35,
+//                "trend": "FALLING",
+//                "deltaCm": -56
+//        },
+//        {
+//            "time": "13:11:00",
+//                "levelCm": 91,
+//                "trend": "RISING",
+//                "deltaCm": 56
+//        },
+//        {
+//            "time": "18:54:00",
+//                "levelCm": 44,
+//                "trend": "FALLING",
+//                "deltaCm": -47
+//        }
+//        ]
+
+        // 정확하게 할려면 전에 간조 시간부터 디비에서 조회한 조위상승 속도로 계산했을 때 다음 만조시간까지에 올라간 cm와
+        // 다음 만조시에 deltaCm 보다 크면 좀더 일찍 알려주는 이런식으로 해야 정확한게 아닌가 하는 생각이듬
+        // 근데 전날 물때 시간은 알수 없어서 현재일 기준 만조전 간조가 없는 만조는 그냥 30분 과 10분 알림
+        // 앞에 간조가 있는건 디비에서 조회후 속도로 계산한 값보다 deltaCm이 크면? 작으면? 할때 좀 일찍하거나 하는게
+        // 좋지 않을까 늦게 하는 경우는 안전상 없게 하고
+
+
+
+        List<Integer> offsets = offsetService.forDevice(deviceId);
+
         for (TideHighInfo hi : highs) {
             long T = hi.epochSecond();
             String locationName = hi.locationName();
 
-            for (int off : offsets) {
-//                long triggerAt = T + off * 60L;
-                long triggerAt = nowEpoch + testTime; //테스트용
-                testTime += 10;
-//                if (triggerAt <= nowEpoch + 60) continue;
+            // === case 분기: 오늘자 직전 간조 유무만 본다 ===
+            var prevLowOpt = TideCalcUtil.findPrevLowEpoch(tideDailyInfo, T, ZoneId.of("Asia/Seoul"));
+
+            List<Integer> offsetsToUse;
+
+            if (prevLowOpt.isEmpty()) {
+                // case 2: 앞 간조가 없음 → 기본 오프셋
+                planWithOffsets(deviceId, geoKey, nowEpoch, hi, locationName, offsets);
+
+            } else {
+                // case 1: 앞 간조 L 있음 → L~T 구간 속도 기반 동적 오프셋
+                long L = prevLowOpt.getAsLong();
+
+                // 반경 5km, L~T 구간 시간별 상승속도(BigDecimal) 조회
+                List<BigDecimal> speeds = dangerZoneService.loadRiseSpeeds(lat, lon, 5.0, L, T);
+
+                // 통계/적분
+                var stats = TideAlertPlanner.statsBD(speeds);      // vmax, vmean(+)
+                double riseEstimateCm = TideAlertPlanner.integrateRiseCm(speeds, L, T);
+
+                // 바다타임 deltaCm(T) 읽기 (오늘 데이터만 사용)
+                int deltaCm = TideCalcUtil.deltaAt(tideDailyInfo, T); // 없으면 0 처리되도록 구현
+
+                double ratio = (deltaCm <= 0) ? 1.0 : (riseEstimateCm / deltaCm);
+
+                log.info("[OffsetCalc] T={}, L={}, riseCm={}, deltaCm={}, ratio={}",
+                        T, L, riseEstimateCm, deltaCm, String.format("%.2f", ratio));
+
+                // 속도 기반 동적 오프셋 (앞당김만, 뒤로 미루지 않음)
+                offsetsToUse = TideAlertPlanner.adjustOffsets(stats.vmax(), stats.vmeanPos(), riseEstimateCm, deltaCm);
+                planWithOffsets(deviceId, geoKey, nowEpoch, hi, locationName, offsetsToUse);
+            }
 
 
-                // 3) 멱등 체크: (T, off) 조합이 SET에 있으면 스킵하되,
-                //    트리거가 실제로 없으면 오래된 인덱스로 간주하고 SET에서 제거 후 계속 진행
-                String member = T + ":" + off;
-                Boolean dup = redis.opsForSet().isMember(sIdxKey, member);
+        }
+    }
 
-                String eid = eventId(deviceId, geoKey, T, off);
-                JobKey jobKey = JobKey.jobKey(eid, deviceId);
-                TriggerKey trgKey = TriggerKey.triggerKey(eid, deviceId);
+    private void planWithOffsets(String deviceId, String geoKey, long nowEpoch,
+                                 TideHighInfo hi, String locationName, List<Integer> offsets) {
+        long T = hi.epochSecond();
+        String sIdxKey = idxKey(deviceId);
+//        int i = 10;
+        for (int off : offsets) {
+            long triggerAt = T + off * 60L;
+//            long triggerAt = nowEpoch + i;
+            if (triggerAt <= nowEpoch + 60) continue; // 임박 스킵(옵션)
 
-                if (Boolean.TRUE.equals(dup)) {
-                    try {
-                        if (!scheduler.checkExists(trgKey)) {
-                            // 유령 인덱스 치유
-                            redis.opsForSet().remove(sIdxKey, member);
-                        } else {
-                            log.debug("idempotent-skip {} {}", deviceId, member);
-                            continue;
-                        }
-                    } catch (SchedulerException e) {
-                        log.error("idempotent check error {}", eid, e);
-                        continue;
-                    }
+            LocalDateTime triggerTime = LocalDateTime.ofInstant(
+                    Instant.ofEpochSecond(triggerAt),
+                    ZoneId.of("Asia/Seoul")
+            );
+
+            log.info("[OffsetCalc] T={} ({}), offset={} → triggerAt={}",
+                    T,
+                    LocalDateTime.ofInstant(Instant.ofEpochSecond(T), ZoneId.of("Asia/Seoul")),
+                    off,
+                    triggerTime);
+
+            String member = T + ":" + off;
+            Boolean dup = redis.opsForSet().isMember(sIdxKey, member);
+
+            String eid = eventId(deviceId, geoKey, T, off);
+            JobKey jobKey = JobKey.jobKey(eid, deviceId);
+            TriggerKey trgKey = TriggerKey.triggerKey(eid, deviceId);
+
+            try {
+                if (Boolean.TRUE.equals(dup) && scheduler.checkExists(trgKey)) {
+                    log.debug("idempotent-skip {} {}", deviceId, member);
+                    continue;
+                }
+                if (Boolean.TRUE.equals(dup) && !scheduler.checkExists(trgKey)) {
+                    redis.opsForSet().remove(sIdxKey, member); // 유령 SET 치유
                 }
 
-                // 🔒 동일 이벤트 중복 스케줄 방지 (race 방지)
                 String lockKey = "sched:" + eid;
                 if (!cacheService.tryLock(lockKey, Duration.ofSeconds(3))) {
                     log.debug("skip duplicate schedule attempt for {}", eid);
                     continue;
                 }
 
-                try {
-                    // 이미 같은 잡 예약되어 있으면 스킵(중복 방지)
-                    if (scheduler.checkExists(jobKey)) continue;
-
+                if (!scheduler.checkExists(jobKey)) {
                     JobDataMap map = new JobDataMap();
                     map.put("deviceId", deviceId);
                     map.put("tideTs", T);
@@ -153,50 +235,35 @@ public class ScheduleService {
                     map.put("geoKey", geoKey);
                     map.put("locationName", locationName);
 
-                    // 1) 잡은 업서트(add or replace)
                     JobDetail job = JobBuilder.newJob(TideNotifyJob.class)
                             .withIdentity(jobKey)
                             .usingJobData(map)
-                            .storeDurably(true) // durable == true 해야함
+                            .storeDurably(true)
                             .build();
-                    scheduler.addJob(job, true); // replace = true (이미 있으면 교체)
+                    scheduler.addJob(job, true);
+                }
 
-                    // 2) 트리거 있으면 skip(또는 reschedule)
-                    if (scheduler.checkExists(trgKey)) {
-                        // 필요하면 다음처럼 시간만 갱신:
-                        // Trigger newTrg = TriggerBuilder.newTrigger()
-                        //     .withIdentity(trgKey)
-                        //     .forJob(jobKey)
-                        //     .startAt(Date.from(Instant.ofEpochSecond(triggerAt)))
-                        //     .withSchedule(SimpleScheduleBuilder.simpleSchedule()
-                        //         .withMisfireHandlingInstructionFireNow())
-                        //     .build();
-                        // scheduler.rescheduleJob(trgKey, newTrg);
-                        continue;
-                    }
-
-                    // 3) 새 트리거만 등록
+                if (!scheduler.checkExists(trgKey)) {
                     Trigger trigger = TriggerBuilder.newTrigger()
                             .withIdentity(trgKey)
-                            .forJob(jobKey) // 주의: jobKey로 연결(존재 보장됨)
+                            .forJob(jobKey)
                             .startAt(Date.from(Instant.ofEpochSecond(triggerAt)))
                             .withSchedule(SimpleScheduleBuilder.simpleSchedule()
                                     .withMisfireHandlingInstructionFireNow())
                             .build();
-
                     scheduler.scheduleJob(trigger);
                     log.info("scheduled {} @{}", eid, triggerAt);
 
-                    // 6) 멱등 인덱스 등록 + TTL
                     redis.opsForSet().add(sIdxKey, member);
                     redis.expire(sIdxKey, Duration.ofDays(indexTtlDays));
-
-                } catch (SchedulerException e) {
-                    log.error("schedule error {}", eid, e);
                 }
+
+            } catch (SchedulerException e) {
+                log.error("schedule error {}", eid, e);
             }
         }
     }
+
 
     /** (옵션) 디바이스의 기존 예약을 전부 지우고 싶을 때 */
     public void cancelAllForDevice(String deviceId) {
