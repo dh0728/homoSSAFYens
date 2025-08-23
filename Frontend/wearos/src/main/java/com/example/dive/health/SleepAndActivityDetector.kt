@@ -173,9 +173,9 @@ object SleepAndActivityDetector {
                 normalMin = 50
             )
             userState.marineActivityMode == MarineActivityMode.OFF -> HeartRateThresholds(
-                criticalMin = 100, //40
-                warningMin = 110, //50
-                normalMin = 120 //55
+                criticalMin = 70, //40
+                warningMin = 75, //50
+                normalMin = 80 //55
             )
             userState.marineActivityMode == MarineActivityMode.FISHING -> HeartRateThresholds(
                 criticalMin = 42,
