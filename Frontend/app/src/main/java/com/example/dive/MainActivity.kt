@@ -33,6 +33,12 @@ import java.util.*
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import com.example.dive.wear.WearBridge
+import com.google.android.gms.tasks.Tasks
+import com.google.android.gms.wearable.Wearable
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
@@ -133,21 +139,31 @@ class MainActivity : AppCompatActivity() {
 //        }
 
         // ✅ 워치 브릿지 로컬 테스트 (원하면 임시 버튼으로 호출)
-         AppFirebaseMessagingService.showLocalNotification(
-             ctx = this,
-             title = "워치 브릿지 테스트",
-             body = "이 알림이 워치에도 보이면 성공!",
-             notificationId = 4242,
-             evtId = "bridge-check"
-         )
-
-
+//        sendTestToWatch()
+//        WearBridge.sendTest(this);
 
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
+        }
+    }
+
+    // 워치로 테스트 메시지 던지기
+    private fun sendTestToWatch() {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val client = Wearable.getMessageClient(this@MainActivity)
+                val nodes = Tasks.await(Wearable.getNodeClient(this@MainActivity).connectedNodes)
+
+                for (node in nodes) {
+                    client.sendMessage(node.id, "/tide/test", "bridge-check".toByteArray())
+                }
+                Log.d("MainActivity", "워치로 test message 전송 완료")
+            } catch (e: Exception) {
+                Log.e("MainActivity", "워치 전송 실패: ${e.message}", e)
+            }
         }
     }
 
