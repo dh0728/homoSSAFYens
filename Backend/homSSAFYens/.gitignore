@@ -44,3 +44,4 @@ application-*.properties
 
 ### env ###
 /src/main/resources/properties/env.properties
+/src/main/resources/badaTime-dev-firebase-key.json
