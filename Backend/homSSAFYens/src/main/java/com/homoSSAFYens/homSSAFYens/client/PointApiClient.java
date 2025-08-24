@@ -1,6 +1,7 @@
 package com.homoSSAFYens.homSSAFYens.client;
 
 import com.homoSSAFYens.homSSAFYens.config.ClientProperties;
+import com.homoSSAFYens.homSSAFYens.dto.PointEnvelope;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -15,6 +16,25 @@ public class PointApiClient {
     public PointApiClient(@Qualifier("pointWebClient") WebClient wc, ClientProperties props) {
         this.wc = wc;
         this.apiKey = props.getPoint().getKey();
+    }
+
+    /**
+     * 특정구역의 낚시포인트 정보를 조회하는 서비스 api 테스트
+     * @param lat 위도
+     * @param lon 경도
+     * @return PointEnvelope
+     */
+    public PointEnvelope getPoint(double lat, double lon) {
+        return wc.get()
+                .uri(u -> u
+                        .queryParam("key", apiKey)
+                        .queryParam("lat", lat)
+                        .queryParam("lon", lon)
+                        .build()
+                )
+                .retrieve()
+                .bodyToMono(PointEnvelope.class)
+                .block();
     }
 
     /**
