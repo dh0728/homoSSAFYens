@@ -3,11 +3,17 @@ package com.example.dive
 import android.app.Application
 import com.example.dive.data.HealthRepository
 import com.example.dive.health.HeartRateMonitor
+import com.example.dive.notify.WearNotif
 import com.example.dive.presentation.ui.MarineActivityMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 class App : Application() {
+
+    object AppHolder {
+        lateinit var appContext: Application
+            internal set
+    }
 
     lateinit var healthRepo: HealthRepository
         private set
@@ -26,8 +32,10 @@ class App : Application() {
 
         heartRateMonitor = HeartRateMonitor(
             context = this,
-            marineActivityModeFlow = marineModeFallback,
             healthRepository = healthRepo
         )
+
+//        WearNotif.init(this);
+        WearNotif.ensureChannel(this);
     }
 }

@@ -35,10 +35,24 @@
         android:text="07.22 (화)"
         android:textColor="@android:color/white"
         android:textSize="14sp"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/btnSettings"
         app:layout_constraintBaseline_toBaselineOf="@id/tvTitle"/>
 
     <!-- 상단 웨이브 카드(현재 위치 근처 바다) -->
+
+    <ImageButton
+        android:id="@+id/btnSettings"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:layout_marginEnd="10dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:paddingEnd="20dp"
+        android:src="@android:drawable/ic_menu_preferences"
+        app:layout_constraintBottom_toTopOf="@+id/cardNearestSea"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/tvTitle" />
+
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/cardNearestSea"
         android:layout_width="0dp"

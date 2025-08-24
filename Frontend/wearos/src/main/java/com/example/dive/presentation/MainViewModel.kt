@@ -1,5 +1,6 @@
 package com.example.dive.presentation
 
+import TideWeeklyResponse
 import android.app.Application
 import android.content.SharedPreferences
 import android.graphics.Bitmap
@@ -86,6 +87,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // --- 기존 UI States ---
     private val _tideUiState = MutableStateFlow<TideUiState>(TideUiState.Loading)
     val tideUiState: StateFlow<TideUiState> = _tideUiState.asStateFlow()
+    // 🔹 주간 물때 UI State 추가
+    private val _tideWeeklyState = MutableStateFlow<TideWeeklyResponse?>(null)
+    val tideWeeklyState: StateFlow<TideWeeklyResponse?> = _tideWeeklyState.asStateFlow()
     private val _weatherUiState = MutableStateFlow<WeatherUiState>(WeatherUiState.Loading)
     val weatherUiState: StateFlow<WeatherUiState> = _weatherUiState.asStateFlow()
     private val _fishingPointsUiState = MutableStateFlow<FishingPointsUiState>(FishingPointsUiState.Loading)
@@ -135,7 +139,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 initialValue = 0
             )
 
-    private var initialSyncDone = false
+    private val _initialSyncDone = MutableStateFlow(false)
+    val initialSyncDoneFlow: StateFlow<Boolean> = _initialSyncDone.asStateFlow()
     private var pollingJob: Job? = null
 
     init {
@@ -156,6 +161,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 .collect {
                     _tideUiState.value = TideUiState.Success(it.data)
                     markInitialSyncReceived()
+                }
+        }
+        // MainViewModel.kt init 안에서
+        viewModelScope.launch {
+            repo.getTide7dData()
+                .catch { e ->
+                    Log.e("MainViewModel", "주간 물때 수집 실패", e)
+                    _tideWeeklyState.value = null
+                }
+                .collect { weekly ->
+                    Log.d("MainViewModel", "주간 물때 수신: ${weekly.data.size}일치")
+                    _tideWeeklyState.value = weekly
                 }
         }
 
@@ -221,7 +238,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 .onStart { emit(false) }
                 .distinctUntilChanged()
                 .collect { connected ->
-                    if (connected && !fired && !initialSyncDone) {
+                    if (connected && !fired && !_initialSyncDone.value) {
                         fired = true
                         safeRequestRefresh("on-connect")
                     }
@@ -273,20 +290,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun markInitialSyncReceived() {
-        if (!initialSyncDone) {
-            initialSyncDone = true
+        if (!_initialSyncDone.value) { // Fix initialSyncDone reference
+            _initialSyncDone.value = true
             _syncHintState.value = SyncHint.NONE
-            pollingJob?.cancel()
+            pollingJob?.cancel() // Use safe call
             pollingJob = null
         }
     }
 
     private fun startPollingRefresh() {
-        if (pollingJob?.isActive == true) return
+        if (pollingJob?.isActive == true) return // Use safe call for nullable Job
         pollingJob = viewModelScope.launch {
             val backoffs = listOf(6000L, 8000L, 10000L)
             for ((idx, waitMs) in backoffs.withIndex()) {
-                if (initialSyncDone) break
+                if (_initialSyncDone.value) break
                 if (phoneConnected.value) {
                     safeRequestRefresh("polling-connect-$idx")
                 } else {

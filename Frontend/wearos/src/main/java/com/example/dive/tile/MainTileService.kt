@@ -60,7 +60,6 @@ class MainTileService : TileService() {
         repository = WatchDataRepository(this)
         heartRateMonitor = HeartRateMonitor(
             this,
-            MutableStateFlow(com.example.dive.presentation.ui.MarineActivityMode.OFF),
             HealthRepository(this)
         )
     }

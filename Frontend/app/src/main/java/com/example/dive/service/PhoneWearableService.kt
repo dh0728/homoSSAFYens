@@ -1,9 +1,12 @@
 package com.example.dive.service
 
+import android.net.Uri
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Intent
+import android.app.PendingIntent
 import android.location.Location
 import android.telephony.SmsManager
 import android.util.Log
@@ -106,6 +109,24 @@ class PhoneWearableService : WearableListenerService() {
                 val reason = String(messageEvent.data)
                 handleSosTrigger(reason)
             }
+            "/request/tide7d" -> {
+                PhoneCache.loadJson(this, KEY_TIDE7D)?.let {
+                    sendMessageToWatch("/response/tide7d", it.toByteArray(), nodeId)
+                }
+                requestRefresh(nodeId)
+            }
+
+            "/request_emergency_number" -> {
+                val prefs = getSharedPreferences("emergency_settings", Context.MODE_PRIVATE)
+                val emergencyNumber = prefs.getString("emergency_number", null)
+                if (emergencyNumber != null) {
+                    sendMessageToWatch("/response_emergency_number", emergencyNumber.toByteArray(), nodeId)
+                    Log.d(TAG, "Sent emergency number to watch: $emergencyNumber")
+                } else {
+                    sendMessageToWatch("/response_emergency_number", "".toByteArray(), nodeId) // Send empty if not set
+                    Log.d(TAG, "Emergency number not set on phone, sent empty response.")
+                }
+            }
             else -> Unit
         }
     }
@@ -198,6 +219,7 @@ class PhoneWearableService : WearableListenerService() {
     private fun refreshAllData(nodeId: String, location: Location?) {
         val (lat, lon) = resolveLatLon(location)
         fetchTideData(lat, lon, nodeId)
+        fetchTide7dData(lat, lon, nodeId)
         fetchWeatherData(lat, lon, nodeId)
         fetchWeather7dData(lat, lon, nodeId)
         fetchFishingPoints(lat, lon, nodeId)
@@ -339,25 +361,56 @@ class PhoneWearableService : WearableListenerService() {
     @SuppressLint("MissingPermission")
     private fun handleSosTrigger(reason: String) {
         Log.e(TAG, "!!! SOS TRIGGERED !!! Reason: $reason")
-        val emergencyNumber = "01012345678" // TODO 실제 번호
+        val prefs = getSharedPreferences("emergency_settings", Context.MODE_PRIVATE)
+        val emergencyNumber = prefs.getString("emergency_number", null)
+
+        if (emergencyNumber == null) {
+            Log.e(TAG, "Emergency number not set. Cannot trigger SOS.")
+            createSosNotification("긴급 연락처 미설정", "앱에서 긴급 연락처를 설정해주세요.")
+            return
+        }
+
         fusedLocationClient.lastLocation
-            .addOnSuccessListener { location ->
+            .addOnCompleteListener { task ->
+                val location = if (task.isSuccessful) task.result else null
                 val link = location?.let {
                     "https://www.google.com/maps/search/?api=1&query=${it.latitude},${it.longitude}"
                 } ?: "위치 정보 없음"
+
+                if (task.exception != null) {
+                    Log.e(TAG, "SOS location failed", task.exception)
+                }
+
+                // Send SMS (existing logic)
                 val sms = SmsManager.getDefault()
                 val msg = "긴급 SOS!\n사유: $reason\n위치: $link"
+
+                val sentIntent = PendingIntent.getBroadcast(this, 0, Intent(this, SmsSentReceiver::class.java).apply {
+                    putExtra("emergency_number", emergencyNumber)
+                    putExtra("sms_body", msg)
+                }, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+                val deliveredIntent = PendingIntent.getBroadcast(this, 0, Intent(this, SmsDeliveredReceiver::class.java), PendingIntent.FLAG_IMMUTABLE)
+
                 try {
-                    sms.sendTextMessage(emergencyNumber, null, msg, null, null)
-                    Log.d(TAG, "SOS SMS sent")
+                    sms.sendTextMessage(emergencyNumber, null, msg, sentIntent, deliveredIntent)
+                    Log.d(TAG, "SOS SMS sent with tracking intents.")
                 } catch (e: Exception) {
-                    Log.e(TAG, "SOS SMS failed: ${e.message}")
+                    Log.e(TAG, "SOS SMS failed to send", e)
                 }
+
+                // Initiate Phone Call (NEW LOGIC)
+                try {
+                    val callIntent = Intent(Intent.ACTION_CALL).apply {
+                        data = Uri.parse("tel:$emergencyNumber")
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) // Required for starting activity from a service
+                    }
+                    startActivity(callIntent)
+                    Log.d(TAG, "Emergency call initiated to: $emergencyNumber")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to initiate emergency call", e)
+                }
+
                 createSosNotification(reason, link)
-            }
-            .addOnFailureListener { e ->
-                Log.e(TAG, "SOS location failed: ${e.message}")
-                createSosNotification(reason, "위치 정보 없음")
             }
     }
 
@@ -400,5 +453,36 @@ class PhoneWearableService : WearableListenerService() {
         private const val KEY_W6H = "last_w6h_json"
         private const val KEY_W7D = "last_w7d_json"
         private const val KEY_FISH = "last_fish_json"
+        private const val KEY_TIDE7D = "last_tide7d_json"
+
     }
+
+    private fun fetchTide7dData(lat: Double?, lon: Double?, nodeId: String) {
+        Log.d(TAG, "🌊 fetchTide7dData 요청 lat=$lat lon=$lon nodeId=$nodeId")
+        if (lat == null || lon == null) {
+            sendMessageToWatch("/response/tide7d/error", "Location not available".toByteArray(), nodeId)
+            return
+        }
+        RetrofitClient.instance.getWeeklyTide(lat, lon)   // ✅ 여기서 getWeeklyTide 사용
+            .enqueue(object : Callback<TideWeeklyResponse> {
+                override fun onResponse(call: Call<TideWeeklyResponse>, response: Response<TideWeeklyResponse>) {
+                    if (response.isSuccessful) {
+                        val body = response.body()
+                        val payload = gson.toJson(body).toByteArray()
+                        Log.d(TAG, "🌊 fetchTide7dData 성공 ${body?.data?.size}일치")
+                        sendMessageToWatch("/response/tide7d", payload, nodeId)
+                        body?.let { PhoneCache.saveJson(this@PhoneWearableService, KEY_TIDE7D, it) }
+                    } else {
+                        sendMessageToWatch("/response/tide7d/error", "API Error: ${response.code()}".toByteArray(), nodeId)
+                    }
+                }
+                override fun onFailure(call: Call<TideWeeklyResponse>, t: Throwable) {
+                    Log.e(TAG, "🌊 fetchTide7dData 실패: ${t.message}")
+                    sendMessageToWatch("/response/tide7d/error", (t.message ?: "error").toByteArray(), nodeId)
+                }
+            })
+    }
+
+
+
 }

@@ -2,12 +2,15 @@ package com.example.dive
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
+import android.widget.ImageButton
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.RequiresPermission
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.view.ViewCompat
@@ -34,6 +37,12 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.google.firebase.messaging.FirebaseMessaging
+import com.example.dive.wear.WearBridge
+import com.google.android.gms.tasks.Tasks
+import com.google.android.gms.wearable.Wearable
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
@@ -44,6 +53,7 @@ class MainActivity : AppCompatActivity() {
     private var lastLat: Double? = null
     private var lastLon: Double? = null
 
+    @RequiresPermission(anyOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -79,7 +89,7 @@ class MainActivity : AppCompatActivity() {
 
         // ✅ Android 13+ 알림 권한 요청 (한 번만)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val perm = android.Manifest.permission.POST_NOTIFICATIONS
+            val perm = Manifest.permission.POST_NOTIFICATIONS
             if (checkSelfPermission(perm) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(arrayOf(perm), 1001)
             }
@@ -87,6 +97,9 @@ class MainActivity : AppCompatActivity() {
 
         tvNearestSub = findViewById(R.id.tvNearestSub)
         tvDate = findViewById(R.id.tvDate)
+        findViewById<ImageButton>(R.id.btnSettings).setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         chipGroup = findViewById(R.id.chipGroup)
 
@@ -144,21 +157,51 @@ class MainActivity : AppCompatActivity() {
 //        }
 
         // ✅ 워치 브릿지 로컬 테스트 (원하면 임시 버튼으로 호출)
-         AppFirebaseMessagingService.showLocalNotification(
-             ctx = this,
-             title = "워치 브릿지 테스트",
-             body = "이 알림이 워치에도 보이면 성공!",
-             notificationId = 4242,
-             evtId = "bridge-check"
-         )
-
-
+//        sendTestToWatch()
+//        WearBridge.sendTest(this);
 
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
+        }
+
+        checkAndRequestSosPermissions()
+    }
+
+    private fun checkAndRequestSosPermissions() {
+        val permissionsToRequest = mutableListOf<String>()
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
+            permissionsToRequest.add(Manifest.permission.SEND_SMS)
+        }
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+            permissionsToRequest.add(Manifest.permission.CALL_PHONE)
+        }
+
+        if (permissionsToRequest.isNotEmpty()) {
+            ActivityCompat.requestPermissions(
+                this,
+                permissionsToRequest.toTypedArray(),
+                104 // New request code for SOS
+            )
+        }
+    }
+
+    // 워치로 테스트 메시지 던지기
+    private fun sendTestToWatch() {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val client = Wearable.getMessageClient(this@MainActivity)
+                val nodes = Tasks.await(Wearable.getNodeClient(this@MainActivity).connectedNodes)
+
+                for (node in nodes) {
+                    client.sendMessage(node.id, "/tide/test", "bridge-check".toByteArray())
+                }
+                Log.d("MainActivity", "워치로 test message 전송 완료")
+            } catch (e: Exception) {
+                Log.e("MainActivity", "워치 전송 실패: ${e.message}", e)
+            }
         }
     }
 
@@ -182,6 +225,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @RequiresPermission(anyOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
     private fun getCurrentLocationAndCallApi(showFragment: Boolean = false) {
         // 권한 체크
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -328,6 +372,12 @@ class MainActivity : AppCompatActivity() {
             // 배경 위치 허용/거부 결과 로그 정도만
             val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
             Log.d("MainActivity", "Background location permission = $granted")
+        } else if (requestCode == 104) { // SOS Permissions
+            if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                Log.d("MainActivity", "SOS permissions granted.")
+            } else {
+                Log.w("MainActivity", "SOS permissions were denied.")
+            }
         }
     }
 }

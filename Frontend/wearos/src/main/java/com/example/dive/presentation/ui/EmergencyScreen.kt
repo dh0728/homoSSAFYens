@@ -1,40 +1,78 @@
 package com.example.dive.presentation.ui
 
-import androidx.compose.foundation.background
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.util.Log
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.wear.compose.material.*
 import com.example.dive.emergency.EmergencyManager
+import com.example.dive.health.HealthMonitoringService
 import com.example.dive.presentation.EmergencyUiState
 import com.example.dive.presentation.MainViewModel
 import com.example.dive.presentation.MeasurementState
-import com.example.dive.presentation.theme.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Warning
-import androidx.lifecycle.viewmodel.compose.viewModel
-import android.content.Context
-import android.content.Intent
-import android.util.Log
-import com.example.dive.health.HealthMonitoringService
+import com.example.dive.presentation.theme.AccentRed
+import com.example.dive.presentation.theme.TextPrimary
+import com.example.dive.presentation.theme.TextSecondary
+import com.example.dive.presentation.theme.TextTertiary
 
 @Composable
 fun EmergencyScreen(viewModel: MainViewModel = viewModel()) {
     val context = LocalContext.current
 
+    val permissions = arrayOf(Manifest.permission.SEND_SMS, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.CALL_PHONE)
+
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissionsMap ->
+        if (permissionsMap.values.all { it }) {
+            Log.d("EmergencyScreen", "All SOS permissions granted.")
+            Toast.makeText(context, "권한이 허용되었습니다. 다시 시도해주세요.", Toast.LENGTH_SHORT).show()
+        } else {
+            Log.e("EmergencyScreen", "SOS permissions denied.")
+            Toast.makeText(context, "SOS 기능에 필요한 권한이 거부되었습니다.", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    val onSosClick = {
+        val hasTelephony = context.packageManager.hasSystemFeature(PackageManager.FEATURE_TELEPHONY)
+        if (hasTelephony) {
+            // If watch can send SMS, check permissions for it
+            val permissionsGranted = permissions.all {
+                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+            }
+            if (permissionsGranted) {
+                EmergencyManager.triggerEmergencySOS(context, "수동 호출")
+            } else {
+                launcher.launch(permissions)
+            }
+        } else {
+            // If watch cannot send SMS, just delegate to phone
+            EmergencyManager.triggerEmergencySOS(context, "수동 호출")
+        }
+    }
+
     val uiState = viewModel.emergencyUiState.collectAsState().value
-    // 스무딩된 실시간 HR
     val liveHr = viewModel.liveHeartRateStable.collectAsState().value
     val ms = viewModel.measurementState.collectAsState().value
-
-    Log.d("EmergencyScreen", "Recomposed uiState=$uiState, live=$liveHr, isMeasuring=${ms.isMeasuring}")
 
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         when (uiState) {
@@ -43,7 +81,7 @@ fun EmergencyScreen(viewModel: MainViewModel = viewModel()) {
                 Text(
                     text = "응급 정보를 가져올 수 없습니다.",
                     modifier = Modifier.padding(16.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    textAlign = TextAlign.Center,
                     color = MaterialTheme.colors.error
                 )
             }
@@ -52,7 +90,7 @@ fun EmergencyScreen(viewModel: MainViewModel = viewModel()) {
                     context = context,
                     lastMeasured = uiState.lastMeasured,
                     locationStatus = uiState.locationStatus,
-                    onSosClick = { EmergencyManager.triggerEmergencySOS(context, "수동 호출") },
+                    onSosClick = onSosClick, // Use the new onSosClick lambda
                     measurementState = ms,
                     liveHeartRate = liveHr
                 )
@@ -70,11 +108,6 @@ fun EmergencyInfoCard(
     measurementState: MeasurementState,
     liveHeartRate: Int
 ) {
-    Log.d(
-        "EmergencyInfoCard",
-        "isMeasuring: ${measurementState.isMeasuring}, lastAverageHr: ${measurementState.lastAverageHr}, lastMeasured: $lastMeasured, live=$liveHeartRate"
-    )
-
     Column(
         modifier = Modifier
             .fillMaxSize()

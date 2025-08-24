@@ -20,7 +20,7 @@ object RetrofitProvider {
     val api: ApiService by lazy {
         Retrofit.Builder()
             .baseUrl("https://api.badatime.p-e.kr/ ") // 배포서버
-            //.baseUrl("http://192.168.35.51:8080/") // 에뮬레이터→로컬서버
+//            .baseUrl("http://10.10.0.74:8080/") // 에뮬레이터→로컬서버
             .addConverterFactory(GsonConverterFactory.create())
             .client(http)
             .build()

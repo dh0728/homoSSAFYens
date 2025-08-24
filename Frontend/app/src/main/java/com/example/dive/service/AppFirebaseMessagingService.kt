@@ -17,6 +17,7 @@ import com.example.dive.R
 import com.example.dive.data.api.RetrofitProvider
 import com.example.dive.data.model.RegisterReq
 import com.example.dive.notify.Notif
+import com.example.dive.wear.WearBridge
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
@@ -61,12 +62,21 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         val evtId = message.data["eventId"] ?: message.data["evtId"] ?: ""
         val notificationId = if (evtId.isNotBlank()) evtId.hashCode() else (System.currentTimeMillis() % 100000).toInt()
 
-        showLocalNotification(
+        // 📱 폰에 로컬 알림 표시
+//       showLocalNotification(
+//            ctx = this,
+//            title = title,
+//            body = body,
+//            notificationId = notificationId,
+//            evtId = evtId
+//        )
+
+        // ⌚ 워치에도 즉시 전달
+        WearBridge.sendTideAlert(
             ctx = this,
             title = title,
-            body = body,
-            notificationId = notificationId,
-            evtId = evtId
+            body  = body,
+            id    = notificationId
         )
     }
     companion object {
