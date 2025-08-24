@@ -16,7 +16,7 @@ import reactor.core.publisher.Mono;
 
 @Slf4j
 @Component
-public class FcmClient {
+public class FcmClient2 {
 
     private final String projectId = "badawatch-a11c4";
     private final WebClient webClient = WebClient.builder()

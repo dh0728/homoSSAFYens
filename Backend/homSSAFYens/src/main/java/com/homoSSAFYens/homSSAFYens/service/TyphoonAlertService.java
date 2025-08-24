@@ -13,11 +13,11 @@ import com.homoSSAFYens.homSSAFYens.utill.GeoUtil;
 public class TyphoonAlertService {
 
     private final DeviceRegistry deviceRegistry;
-    private final FcmClient fcmClient;
+    private final FcmClient2 fcmClient;
     private final TyphoonPathStore pathStore; // ★ 추가
 
     public TyphoonAlertService(DeviceRegistry deviceRegistry,
-                               FcmClient fcmClient,
+                               FcmClient2 fcmClient,
                                TyphoonPathStore pathStore) { // ★ 생성자 주입
         this.deviceRegistry = deviceRegistry;
         this.fcmClient = fcmClient;
