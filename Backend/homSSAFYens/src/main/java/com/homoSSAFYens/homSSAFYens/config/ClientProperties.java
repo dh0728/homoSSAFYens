@@ -70,12 +70,48 @@ public class ClientProperties {
         public void setEncodedKey(Boolean encodedKey) { this.encodedKey = encodedKey; }
     }
 
+    public static class Sgis {
+        private String baseUrl;
+        private String consumerKey;
+        private String consumerSecret;
+        private String keyParam = "consumer_key";
+        private String secretParam = "consumer_secret";
+        private Integer timeoutMs = 3000;
+        private Boolean encodedKey = Boolean.TRUE;
+
+        // --- getters/setters ---
+        public String getBaseUrl()  { return baseUrl; }
+        public void setBaseUrl(String baseUrl) { this.baseUrl = baseUrl;}
+
+        public String getConsumerKey() { return consumerKey;}
+        public void setConsumerKey(String consumerKey) { this.consumerKey = consumerKey;}
+
+        public String getConsumerSecret() { return consumerSecret;}
+        public void setConsumerSecret(String consumerSecret) { this.consumerSecret = consumerSecret;}
+
+        public String getKeyParam() { return keyParam;}
+
+        public void setKeyParam(String keyParam) {this.keyParam = keyParam;}
+
+        public String getSecretParam() { return secretParam;}
+        public void setSecretParam(String secretParam) { this.secretParam = secretParam;}
+
+        public Integer getTimeoutMs() {return timeoutMs;}
+        public void setTimeoutMs(Integer timeoutMs) { this.timeoutMs = timeoutMs;}
+
+        public Boolean getEncodedKey() { return encodedKey;}
+        public void setEncodedKey(Boolean encodedKey) { this.encodedKey = encodedKey;}
+    }
+
+
     private One tide;
     private One current;
     private One forecast;
     private One temp;
     private One point;
     private One air;
+    private Sgis sgis;
+
 
     // --- getters/setters ---
     public One getTide() { return tide; }
@@ -95,4 +131,10 @@ public class ClientProperties {
 
     public One getAir() { return air; }
     public void setAir(One air) { this.air = air; }
+
+    public Sgis getSgis() { return sgis; }
+    public void setSgis(Sgis sgis) { this.sgis = sgis; }
+
+
+
 }
