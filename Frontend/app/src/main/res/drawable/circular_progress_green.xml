@@ -1,0 +1,23 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 회색 배경 원 -->
+    <item android:id="@android:id/background">
+        <shape
+            android:shape="ring"
+            android:innerRadiusRatio="3"
+            android:thicknessRatio="12"
+            android:useLevel="false">
+            <solid android:color="#E0E0E0"/> <!-- 회색 -->
+        </shape>
+    </item>
+
+    <!-- 채워지는 원 -->
+    <item android:id="@android:id/progress">
+        <shape
+            android:shape="ring"
+            android:innerRadiusRatio="3"
+            android:thicknessRatio="12"
+            android:useLevel="true">
+            <solid android:color="#4CAF50"/> <!-- 초록색 -->
+        </shape>
+    </item>
+</layer-list>

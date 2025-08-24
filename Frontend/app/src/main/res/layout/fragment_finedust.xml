@@ -1,0 +1,178 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    android:background="@color/white">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_horizontal">
+
+        <!-- 지역 / 시간 -->
+        <TextView
+            android:id="@+id/tvStation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="측정소"
+            android:textSize="23sp"
+            android:textStyle="bold"
+            android:gravity="center"/>
+
+        <TextView
+            android:id="@+id/tvTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="2025-08-19 16:00"
+            android:textSize="18sp"
+            android:textColor="@android:color/darker_gray"
+            android:gravity="center"/>
+
+        <!-- PM10 / PM25 두개 원형 게이지 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:weightSum="2"
+            android:paddingTop="16dp"
+            android:gravity="center">
+
+            <!-- PM10 -->
+            <FrameLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="35dp"
+                android:gravity="center">
+
+                <ProgressBar
+                    android:id="@+id/progressPm10"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:indeterminate="false"
+                    android:progress="0"
+                    android:max="150"
+                    android:rotation="-90"
+                    android:progressDrawable="@drawable/circular_progress_green" />
+
+                <LinearLayout
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:orientation="vertical"
+                    android:gravity="center">
+
+                    <TextView
+                        android:id="@+id/tvPm10Label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="미세"
+                        android:textSize="14sp"
+                        android:textColor="#4CAF50" />
+
+                    <TextView
+                        android:id="@+id/tvPm10ValueCenter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="#4CAF50" />
+                </LinearLayout>
+            </FrameLayout>
+
+            <!-- PM2.5 -->
+            <FrameLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center">
+
+                <ProgressBar
+                    android:id="@+id/progressPm25"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:indeterminate="false"
+                    android:progress="0"
+                    android:max="75"
+                    android:rotation="-90"
+                    android:progressDrawable="@drawable/circular_progress_blue" />
+
+                <LinearLayout
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:orientation="vertical"
+                    android:gravity="center">
+
+                    <TextView
+                        android:id="@+id/tvPm25Label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="초미세"
+                        android:textSize="14sp"
+                        android:textColor="#2196F3" />
+
+                    <TextView
+                        android:id="@+id/tvPm25ValueCenter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="#2196F3" />
+                </LinearLayout>
+            </FrameLayout>
+        </LinearLayout>
+
+        <!-- 기타 항목들 (Grid) -->
+        <GridLayout
+            android:id="@+id/gridAirItems"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="2"
+            android:rowCount="3"
+            android:layout_marginTop="5dp"
+            android:layout_marginStart="15dp">
+
+            <TextView
+                android:id="@+id/tvO3"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:paddingTop="5dp"
+                android:layout_columnWeight="1"
+                android:text="오존: 0.063ppm (보통)" />
+
+            <TextView
+                android:id="@+id/tvCO"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:paddingTop="5dp"
+                android:layout_columnWeight="1"
+                android:text="일산화탄소: 0.6ppm (좋음)" />
+
+            <TextView
+                android:id="@+id/tvSO2"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:paddingTop="10dp"
+                android:layout_columnWeight="1"
+                android:text="아황산가스: 0.002ppm (좋음)" />
+
+            <TextView
+                android:id="@+id/tvNO2"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:paddingTop="10dp"
+                android:layout_columnWeight="1"
+                android:text="이산화질소: 0.014ppm (좋음)" />
+
+            <TextView
+                android:id="@+id/tvKhai"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:paddingTop="10dp"
+                android:layout_columnWeight="1"
+                android:text="통합대기지수: 78 (보통)" />
+        </GridLayout>
+    </LinearLayout>
+</ScrollView>

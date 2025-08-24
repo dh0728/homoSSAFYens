@@ -1,0 +1,57 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="@android:color/white"
+    android:layout_marginBottom="6dp"
+    android:elevation="2dp">
+
+    <!-- 상단: 시간 + 날씨 아이콘 + 온도 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/tvHourTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="오후 3시"
+            android:textStyle="bold"
+            android:textSize="15sp"
+            android:layout_weight="1"/>
+
+        <TextView
+            android:id="@+id/tvHourSkyTemp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="☀️ 맑음 · 27℃"
+            android:textSize="15sp"
+            android:textStyle="bold"/>
+    </LinearLayout>
+
+    <!-- 하단: 세부 정보 (2행) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingTop="6dp">
+
+        <TextView
+            android:id="@+id/tvHourWindWave"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="풍향: SW · 풍속: 2m/s · 파고: 0.2m"
+            android:textSize="13sp"
+            android:paddingBottom="2dp"/>
+
+        <TextView
+            android:id="@+id/tvHourHumidityRain"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="습도: 85% · 강수량: 0mm"
+            android:textSize="13sp"/>
+    </LinearLayout>
+</LinearLayout>

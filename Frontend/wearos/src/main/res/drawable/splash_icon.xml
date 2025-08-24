@@ -1,0 +1,7 @@
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 배경 (검정색) -->
+    <background android:drawable="@android:color/black" />
+
+    <!-- ✅ 네 로고 -->
+    <foreground android:drawable="@drawable/logo" />
+</adaptive-icon>
