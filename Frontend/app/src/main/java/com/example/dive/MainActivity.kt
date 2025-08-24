@@ -36,6 +36,7 @@ import java.util.*
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import com.google.firebase.messaging.FirebaseMessaging
 import com.example.dive.wear.WearBridge
 import com.google.android.gms.tasks.Tasks
 import com.google.android.gms.wearable.Wearable
@@ -55,11 +56,20 @@ class MainActivity : AppCompatActivity() {
     @RequiresPermission(anyOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+
         //fcm 토큰발급
         AppFirebaseMessagingService.initAndRegisterOnce(this)
 
         // (기존) 현재 기기 서버에 등록
         LocationRegistrar.register(this)
+
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (!task.isSuccessful) return@addOnCompleteListener
+            val token = task.result
+            Log.d("FCM", "token = $token") // Logcat로 확인
+            // 여기서 서버 등록 호출(혹은 토큰만 복사해서 Postman으로 등록)
+        }
 
         // (교체) 위치 권한 있을 때만 안전하게 등록
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
@@ -68,6 +78,7 @@ class MainActivity : AppCompatActivity() {
                 LocationRegistrar.register(this)
             } catch (_: SecurityException) { /* 권한 타이밍 이슈 방어 */ }
         }
+
 
         Log.d("MainActivity", "앱 실행됨!")
         enableEdgeToEdge()

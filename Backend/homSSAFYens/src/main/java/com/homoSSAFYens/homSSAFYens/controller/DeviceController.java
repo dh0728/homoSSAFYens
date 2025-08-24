@@ -1,6 +1,7 @@
 package com.homoSSAFYens.homSSAFYens.controller;
 
-
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import com.homoSSAFYens.homSSAFYens.common.ApiResponse;
 import com.homoSSAFYens.homSSAFYens.common.GeoKeyUtil;
 import com.homoSSAFYens.homSSAFYens.dto.LocateReq;
